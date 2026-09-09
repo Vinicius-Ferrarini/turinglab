@@ -13,7 +13,7 @@ const MT_L12 = {
   description: "Tem como entrada um número qualquer em decimal e gera como saída o número incrementado em uma unidade – Incremento decimal.",
   hint:        "Igual ao incremento binário, mas em base 10: soma 1 ao último dígito, propagando o carry quando passar de 9.",
   validate:    (w) => String(parseInt(w,10)+1),
-  testWords:   ["0","1","9","19","99","100"],
+  testWords:   ["0","1","9","19","99","100","2","3","4","5","6","7","8","20","30","40","50","60","70","80","90"],
   skipEmptyWord: true,
   formalDescription: {
     sigma:   '{0,1,2,3,4,5,6,7,8,9}',

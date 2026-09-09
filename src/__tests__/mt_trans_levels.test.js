@@ -126,7 +126,7 @@ const KNOWN_WRITE_GAP_CEILING = {
   // professor]" no cabeçalho de L11.js — não expandi o alfabeto declarado
   // pra não tomar essa decisão de conteúdo sem confirmação.
   L11: 86,
-  L10: 4, L12: 22, L14: 36, L16: 17, L17: 27, L18: 38,
+  L10: 4, L16: 17, L17: 27, L18: 38,
   L19: 48, L20: 59, L21: 70, L22: 81, L23: 91, L24: 1,
 };
 

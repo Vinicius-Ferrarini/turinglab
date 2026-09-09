@@ -13,7 +13,7 @@ const MT_L14 = {
   description: "Tem como entrada um número qualquer em hexadecimal e gera como saída o número incrementado em uma unidade – Incremento hexadecimal.",
   hint:        "Igual ao incremento decimal, mas em base 16: depois de 'F' o dígito vira '0' e propaga o carry.",
   validate:    (w) => (parseInt(w,16)+1).toString(16).toUpperCase(),
-  testWords:   ["0","9","A","F","1F","FF"],
+  testWords:   ["0","9","A","F","1F","FF","2","3","4","5","6","7","8","B","C","D","E","20","30","40","50","60","70","80","90","A0","B0","C0","D0","E0","F0"],
   skipEmptyWord: true,
   formalDescription: {
     sigma:   '{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}',
