@@ -124,3 +124,26 @@ export function validateFormalTransitions({ parsedQ, parsedSigma, transitionTabl
     return { ok: false, cellErrors: errors };
   return { ok: true };
 }
+
+// ─── Snapshot do formulário (içar estado pro orquestrador — persistência) ────
+// FormalDescriptionModal.jsx vira um componente controlado (initialValues/
+// onStateChange, ver ADR 0011 §3.1): estas funções puras definem "qual
+// snapshot representa o estado atual do formulário", testável sem montar
+// React, antes de tocar no componente.
+export const EMPTY_FORMAL_STATE = {
+  inputQ: '', inputSigma: '', inputInitial: '', inputFinal: '',
+  areElementsValid: false, parsedQ: [], parsedSigma: [], transitionTableData: {},
+};
+
+/** Extrai só as 8 peças de estado que compõem o payload persistido (ignora fieldErrors/tableErrors — deriváveis, não persistidos). */
+export function buildFormalStateSnapshot({
+  inputQ, inputSigma, inputInitial, inputFinal,
+  areElementsValid, parsedQ, parsedSigma, transitionTableData,
+}) {
+  return { inputQ, inputSigma, inputInitial, inputFinal, areElementsValid, parsedQ, parsedSigma, transitionTableData };
+}
+
+/** Completa um snapshot salvo (possivelmente parcial) com os defaults de fase nova. */
+export function normalizeFormalInitialValues(initialValues) {
+  return { ...EMPTY_FORMAL_STATE, ...(initialValues ?? {}) };
+}

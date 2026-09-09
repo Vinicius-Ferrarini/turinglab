@@ -58,7 +58,43 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       `g.reset()` sem args) continua funcionando sem mudança.
       Testes: `npx vitest run graphReset.test.js` 7/7. `npm test` completo:
       **2035/2035 passando** (24 arquivos) — sem regressão.
-- [ ] **4. Içar Descrição Formal (AFD e AP)** — componentes controlados
+- [x] **4. Içar Descrição Formal (AFD e AP)** — componentes controlados ✅
+      TDD: testes primeiro. AFD já tinha lógica pura isolada
+      (`formalDescriptionLogic.js`) — adicionei `buildFormalStateSnapshot`/
+      `normalizeFormalInitialValues`/`EMPTY_FORMAL_STATE` com 6 novos testes em
+      `formalDescription.test.js` (confirmados falhando antes). AP não tinha
+      nada extraído — criei `src/modules/ap/utils/apFormalDescriptionLogic.js`
+      (`validateApFormalElements`/`validateApFormalTransitions`/
+      `canvasGammaFromTransitions`/snapshot helpers, reaproveitando
+      `parseFormalInput`/`checkFormalBraceFormat` do AFD — mesmo padrão de
+      reuso cross-módulo já usado pelo AP com `sizeHint.js`/
+      `bracketAutoClose.js`) com 15 testes novos em
+      `apFormalDescriptionLogic.test.js`, confirmados falhando (módulo
+      inexistente) antes de implementar.
+      Depois: `FormalDescriptionModal.jsx` e `APFormalDescription.jsx`
+      viraram componentes controlados (`initialValues`/`onStateChange`).
+      AFD: `useState` inicializa de `initialValues`; o `useEffect` de reset
+      ao abrir (`[isOpen]`) só zera quando NÃO há `initialValues` (senão
+      hidrata e imediatamente apagaria — ADR 0011 §3.1); um 2º `useEffect`
+      sempre emite o snapshot atual via `onStateChange` (sem debounce aqui —
+      fica pro hook do item 5). AP: sem `useEffect` de reset — o reset já
+      era por remontagem via `key` no pai (comentário original do arquivo),
+      então o `useState(initialValues)` já resolve; `validateElements`/
+      `validateTransitions` do componente passaram a chamar as funções puras
+      novas em vez de duplicar a lógica inline.
+      **Efeito colateral observado (não é scope creep — é o próprio
+      requisito de persistência parcial)**: como o pai vai manter o último
+      snapshot emitido e repassá-lo como `initialValues` a cada render (item
+      5), fechar/reabrir o painel do AP (que remonta via `key`) deixará de
+      apagar o que o aluno já tinha digitado — hoje isso já acontece
+      (comportamento existente antes desta tarefa), então não é regressão;
+      é a persistência funcionando como pedido.
+      Testes: `npx eslint` nos 4 arquivos tocados — só o warning esperado
+      `react-hooks/set-state-in-effect` (já documentado no CLAUDE.md,
+      downgradado a warn — mesmo padrão do reset-on-open original). `npm
+      test` completo: **2055/2055 passando** (25 arquivos, incluindo os 21
+      testes novos e o guard-rail `formalDescription.test.js` inteiro
+      verde) — sem regressão.
 - [ ] **5. `useLevelSessionPersistence.js`** + integração nos 4 `loadLevel`
 - [ ] **6. E2E Playwright (Feature A)** — 4 specs, um por módulo
 - [ ] **7. `exportImportFile.js`** + testes unitários (serialização/validação)

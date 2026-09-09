@@ -2,7 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import './FormalDescriptionModal.css';
 import { onBracketKeyDown } from './utils/bracketAutoClose';
-import { parseFormalInput, checkFormalBraceFormat } from './utils/formalDescriptionLogic';
+import {
+  parseFormalInput, checkFormalBraceFormat,
+  buildFormalStateSnapshot, normalizeFormalInitialValues,
+} from './utils/formalDescriptionLogic';
 
 export default function FormalDescriptionModal({
   isOpen,
@@ -15,6 +18,12 @@ export default function FormalDescriptionModal({
   onValidateGraph,
   onTableFocusChange,
   demo, // { fields, rows, deltaRows, allStates, current } — modo Aula Guiada (read-only)
+  // Componente controlado (persistência de sessão — ver ADR 0011 §3.1):
+  // initialValues hidrata o formulário ao montar/reabrir (snapshot salvo ou
+  // null pra fase nova); onStateChange emite o snapshot atual a cada mudança
+  // (sem debounce aqui — quem debounça é o hook de persistência, não este componente).
+  initialValues,
+  onStateChange,
 }) {
   // ── Auto-scroll para o elemento ativo no modo demo ─────────────────────────
   const currentElRef = useRef(null);
@@ -26,28 +35,47 @@ export default function FormalDescriptionModal({
   useEffect(() => {
     if (demoKey) currentElRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [demoKey]);
-  const [inputQ,       setInputQ]       = useState('');
-  const [inputSigma,   setInputSigma]   = useState('');
-  const [inputInitial, setInputInitial] = useState('');
-  const [inputFinal,   setInputFinal]   = useState('');
+  const initNorm = normalizeFormalInitialValues(initialValues);
+  const [inputQ,       setInputQ]       = useState(initNorm.inputQ);
+  const [inputSigma,   setInputSigma]   = useState(initNorm.inputSigma);
+  const [inputInitial, setInputInitial] = useState(initNorm.inputInitial);
+  const [inputFinal,   setInputFinal]   = useState(initNorm.inputFinal);
 
-  const [areElementsValid,    setAreElementsValid]    = useState(false);
-  const [parsedQ,             setParsedQ]             = useState([]);
-  const [parsedSigma,         setParsedSigma]         = useState([]);
-  const [transitionTableData, setTransitionTableData] = useState({});
+  const [areElementsValid,    setAreElementsValid]    = useState(initNorm.areElementsValid);
+  const [parsedQ,             setParsedQ]             = useState(initNorm.parsedQ);
+  const [parsedSigma,         setParsedSigma]         = useState(initNorm.parsedSigma);
+  const [transitionTableData, setTransitionTableData] = useState(initNorm.transitionTableData);
 
   const [fieldErrors, setFieldErrors] = useState({ Q: null, Sigma: null, initial: null, final: null });
   const [tableErrors, setTableErrors] = useState({});
 
+  // Ao (re)abrir: hidrata de initialValues quando existir (sessão salva pra
+  // esta fase); senão reseta em branco — comportamento de sempre. Sem essa
+  // distinção, reabrir o painel apagaria imediatamente o que acabou de ser
+  // restaurado (ver ADR 0011 §3.1).
   useEffect(() => {
-    if (isOpen) {
-      setInputQ(''); setInputSigma(''); setInputInitial(''); setInputFinal('');
-      setAreElementsValid(false);
-      setParsedQ([]); setParsedSigma([]); setTransitionTableData({});
-      setFieldErrors({ Q: null, Sigma: null, initial: null, final: null });
-      setTableErrors({});
-    }
+    if (!isOpen) return;
+    const norm = normalizeFormalInitialValues(initialValues);
+    setInputQ(norm.inputQ); setInputSigma(norm.inputSigma);
+    setInputInitial(norm.inputInitial); setInputFinal(norm.inputFinal);
+    setAreElementsValid(norm.areElementsValid);
+    setParsedQ(norm.parsedQ); setParsedSigma(norm.parsedSigma);
+    setTransitionTableData(norm.transitionTableData);
+    setFieldErrors({ Q: null, Sigma: null, initial: null, final: null });
+    setTableErrors({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Emite o snapshot atual a cada mudança relevante — o componente sempre
+  // roda esse efeito (hooks executam antes do `if (!isOpen) return null`
+  // abaixo), então o orquestrador recebe o estado do formulário mesmo com o
+  // painel fechado (necessário pro autosave capturar preenchimento parcial).
+  useEffect(() => {
+    onStateChange?.(buildFormalStateSnapshot({
+      inputQ, inputSigma, inputInitial, inputFinal,
+      areElementsValid, parsedQ, parsedSigma, transitionTableData,
+    }));
+  }, [inputQ, inputSigma, inputInitial, inputFinal, areElementsValid, parsedQ, parsedSigma, transitionTableData, onStateChange]);
 
   if (!isOpen) return null;
 

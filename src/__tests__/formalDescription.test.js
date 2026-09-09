@@ -4,6 +4,9 @@ import {
   checkFormalBraceFormat,
   validateFormalElements,
   validateFormalTransitions,
+  EMPTY_FORMAL_STATE,
+  buildFormalStateSnapshot,
+  normalizeFormalInitialValues,
 } from '../modules/afd/utils/formalDescriptionLogic.js';
 
 // ─── Canvas base: q0(inicial) -a-> q1(final), q0 -b-> q0 ────────────────────
@@ -262,6 +265,65 @@ describe('validateFormalTransitions', () => {
       parsedQ: ['q0'], parsedSigma: ['a', 'b'],
       transitionTableData,
     })).toMatchObject({ ok: true });
+  });
+
+});
+
+// ─── Suite 6: buildFormalStateSnapshot / normalizeFormalInitialValues ────────
+// Extraídas para içar o estado do FormalDescriptionModal.jsx pro orquestrador
+// (persistência de sessão — ver §3.1 do prompt original / item 4 do plano).
+// "Qual snapshot representa o estado atual do formulário" precisa ser puro e
+// testável ANTES de tornar o componente controlado (initialValues/onStateChange).
+describe('buildFormalStateSnapshot', () => {
+
+  it('monta o snapshot com as 8 peças de estado do formulário', () => {
+    const snapshot = buildFormalStateSnapshot({
+      inputQ: '{q0, q1}', inputSigma: '{a}', inputInitial: 'q0', inputFinal: 'q1',
+      areElementsValid: true, parsedQ: ['q0', 'q1'], parsedSigma: ['a'],
+      transitionTableData: { q0: { a: 'q1' } },
+    });
+    expect(snapshot).toEqual({
+      inputQ: '{q0, q1}', inputSigma: '{a}', inputInitial: 'q0', inputFinal: 'q1',
+      areElementsValid: true, parsedQ: ['q0', 'q1'], parsedSigma: ['a'],
+      transitionTableData: { q0: { a: 'q1' } },
+    });
+  });
+
+  it('não inclui campos extras que não fazem parte do shape (fieldErrors/tableErrors ficam de fora)', () => {
+    const snapshot = buildFormalStateSnapshot({
+      inputQ: 'q0', inputSigma: 'a', inputInitial: 'q0', inputFinal: 'q0',
+      areElementsValid: false, parsedQ: [], parsedSigma: [], transitionTableData: {},
+      fieldErrors: { Q: 'ignorado' }, tableErrors: { x: true },
+    });
+    expect(Object.keys(snapshot)).toEqual([
+      'inputQ', 'inputSigma', 'inputInitial', 'inputFinal',
+      'areElementsValid', 'parsedQ', 'parsedSigma', 'transitionTableData',
+    ]);
+  });
+
+});
+
+describe('normalizeFormalInitialValues', () => {
+
+  it('sem initialValues (fase nova) → EMPTY_FORMAL_STATE', () => {
+    expect(normalizeFormalInitialValues(undefined)).toEqual(EMPTY_FORMAL_STATE);
+    expect(normalizeFormalInitialValues(null)).toEqual(EMPTY_FORMAL_STATE);
+  });
+
+  it('initialValues completo → devolvido como está', () => {
+    const full = {
+      inputQ: '{q0}', inputSigma: 'a', inputInitial: 'q0', inputFinal: 'q0',
+      areElementsValid: true, parsedQ: ['q0'], parsedSigma: ['a'],
+      transitionTableData: { q0: { a: 'q0' } },
+    };
+    expect(normalizeFormalInitialValues(full)).toEqual(full);
+  });
+
+  it('initialValues parcial (snapshot salvo no meio do preenchimento) → completa com defaults', () => {
+    const partial = { inputQ: '{q0, q1}', inputInitial: 'q0' };
+    expect(normalizeFormalInitialValues(partial)).toEqual({
+      ...EMPTY_FORMAL_STATE, inputQ: '{q0, q1}', inputInitial: 'q0',
+    });
   });
 
 });

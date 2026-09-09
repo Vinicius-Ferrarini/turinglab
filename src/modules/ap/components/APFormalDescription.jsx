@@ -8,26 +8,42 @@
 import { useState, useRef, useEffect } from 'react';
 import '../../afd/FormalDescriptionModal.css';
 import { onBracketKeyDown } from '../../afd/utils/bracketAutoClose';
+import {
+  validateApFormalElements, validateApFormalTransitions,
+  buildApFormalStateSnapshot, normalizeApFormalInitialValues,
+} from '../utils/apFormalDescriptionLogic';
 
 const LAMBDA = 'λ';
 const showF = (v) => (v === '' || v == null ? LAMBDA : v);
-const normLambda = (v) => { const t = (v || '').trim(); return (t === '' || t === LAMBDA) ? '' : t; };
 
 export default function APFormalDescription({
   isOpen, onClose, nodes, transitions, alphabet, demo,
   onValidateGraph, onElementsSuccess, onSuccess, showToast,
+  // Componente controlado (persistência de sessão — ver ADR 0011 §3.1):
+  // initialValues hidrata o formulário ao montar (snapshot salvo ou null pra
+  // fase nova); onStateChange emite o snapshot atual a cada mudança (sem
+  // debounce aqui — quem debounça é o hook de persistência).
+  initialValues, onStateChange,
 }) {
-  const [inE, setInE]             = useState('');
-  const [inSigma, setInSigma]     = useState('');
-  const [inGamma, setInGamma]     = useState('');
-  const [inInitial, setInInitial] = useState('');
-  const [inBottom, setInBottom]   = useState('');
+  const initNorm = normalizeApFormalInitialValues(initialValues);
+  const [inE, setInE]             = useState(initNorm.inE);
+  const [inSigma, setInSigma]     = useState(initNorm.inSigma);
+  const [inGamma, setInGamma]     = useState(initNorm.inGamma);
+  const [inInitial, setInInitial] = useState(initNorm.inInitial);
+  const [inBottom, setInBottom]   = useState(initNorm.inBottom);
 
-  const [elementsValid, setElementsValid] = useState(false);
-  const [rows, setRows]   = useState([]); // [{ key, from, read, pop }]
-  const [cells, setCells] = useState({}); // key -> { dest, push }
+  const [elementsValid, setElementsValid] = useState(initNorm.elementsValid);
+  const [rows, setRows]   = useState(initNorm.rows); // [{ key, from, read, pop }]
+  const [cells, setCells] = useState(initNorm.cells); // key -> { dest, push }
   const [fieldErrors, setFieldErrors] = useState({});
   const [cellErrors, setCellErrors]   = useState({});
+
+  // Emite o snapshot atual a cada mudança relevante — roda mesmo com o
+  // painel fechado (isOpen controla só a remontagem via `key` no pai, ver
+  // APPart1.jsx), necessário pro autosave capturar preenchimento parcial.
+  useEffect(() => {
+    onStateChange?.(buildApFormalStateSnapshot({ inE, inSigma, inGamma, inInitial, inBottom, elementsValid, rows, cells }));
+  }, [inE, inSigma, inGamma, inInitial, inBottom, elementsValid, rows, cells, onStateChange]);
 
   // Aula (demo): rola até o campo/linha que está sendo revelado quando ele muda.
   const currentElRef = useRef(null);
@@ -43,30 +59,6 @@ export default function APFormalDescription({
   // O reset ao abrir é por remontagem (o pai passa key ao alternar isOpen).
   if (!isOpen) return null;
 
-  const parseInput = (str) => {
-    const clean = str ? str.trim().replace(/^\{|\}$/g, '').trim() : '';
-    return clean ? clean.split(',').map(s => s.trim()).filter(Boolean) : [];
-  };
-  const checkBraceFormat = (str, isSingle = false) => {
-    const t = (str || '').trim();
-    if (!t || t === '{}') return null;
-    const hasBraces = t.startsWith('{') && t.endsWith('}');
-    const hasComma = t.includes(',');
-    if (isSingle) return (t.startsWith('{') || t.endsWith('}')) ? 'single_no_braces' : null;
-    if (hasComma && !hasBraces) return 'multi_needs_braces';
-    if (!hasComma && hasBraces) return 'single_no_braces';
-    return null;
-  };
-  const setsEqual = (a, b) => a.length === b.length && a.every(x => b.includes(x)) && b.every(x => a.includes(x));
-
-  // Γ do desenho: símbolos de pop/push ∪ {Z} (o fundo). Validado contra o grafo.
-  const canvasGamma = (() => {
-    const s = new Set(['Z']);
-    for (const t of transitions) { if (t.pop) s.add(t.pop); for (const c of (t.push || '')) s.add(c); }
-    return [...s].sort();
-  })();
-  const canvasE = nodes.map(n => n.label ?? n.id);
-  const canvasInitial = (() => { const i = nodes.find(n => n.isInitial); return i ? (i.label ?? i.id) : null; })();
   const fromLabel = (id) => nodes.find(n => n.id === id)?.label ?? id;
   const toLabel = (id) => nodes.find(n => n.id === id)?.label ?? id;
 
@@ -75,34 +67,19 @@ export default function APFormalDescription({
   const validateElements = () => {
     if (onValidateGraph && !onValidateGraph()) return;
 
-    const fmts = {
-      E: checkBraceFormat(inE), Sigma: checkBraceFormat(inSigma), Gamma: checkBraceFormat(inGamma),
-      initial: checkBraceFormat(inInitial, true), bottom: checkBraceFormat(inBottom, true),
-    };
-    const braceMsg = (f) => !f ? null
-      : (f === 'multi_needs_braces' ? 'Mais de 1 elemento — use { }' : 'Só 1 elemento — retire { }');
-    if (Object.values(fmts).some(Boolean)) {
-      setFieldErrors({ E: braceMsg(fmts.E), Sigma: braceMsg(fmts.Sigma), Gamma: braceMsg(fmts.Gamma),
-        initial: braceMsg(fmts.initial), bottom: braceMsg(fmts.bottom) });
-      showToast?.('Confira o uso das chaves { }.', 'error');
+    const res = validateApFormalElements({ inE, inSigma, inGamma, inInitial, inBottom, nodes, transitions, alphabet });
+    if (!res.ok) {
+      setFieldErrors(res.fieldErrors);
+      const msg = res.reason === 'brace_format'
+        ? 'Confira o uso das chaves { }.'
+        : `${Object.values(res.fieldErrors).filter(Boolean).length} campo(s) com erro.`;
+      showToast?.(msg, 'error');
       return;
     }
 
-    const pE = parseInput(inE), pSigma = parseInput(inSigma), pGamma = parseInput(inGamma);
-    const pInitial = parseInput(inInitial), pBottom = parseInput(inBottom);
-
-    const errors = {};
-    if (!setsEqual(pE, canvasE))             errors.E = 'Não bate com os estados do desenho';
-    if (!setsEqual(pSigma, alphabet || []))  errors.Sigma = 'Não bate com o alfabeto de entrada';
-    if (!setsEqual(pGamma, canvasGamma))     errors.Gamma = 'Não bate com os símbolos da pilha do desenho';
-    if (pInitial.length !== 1 || pInitial[0] !== canvasInitial) errors.initial = 'Estado inicial incorreto';
-    if (pBottom.length !== 1 || pBottom[0] !== 'Z')             errors.bottom = 'O fundo da pilha é Z';
-    setFieldErrors(errors);
-    if (Object.keys(errors).length) { showToast?.(`${Object.keys(errors).length} campo(s) com erro.`, 'error'); return; }
-
-    const r = transitions.map((t, i) => ({ key: String(i), from: fromLabel(t.from), read: t.read, pop: t.pop }));
-    setRows(r);
-    setCells(Object.fromEntries(r.map(x => [x.key, { dest: '', push: '' }])));
+    setFieldErrors({});
+    setRows(res.rows);
+    setCells(Object.fromEntries(res.rows.map(x => [x.key, { dest: '', push: '' }])));
     setElementsValid(true);
     onElementsSuccess?.(); // ★2
   };
@@ -114,16 +91,13 @@ export default function APFormalDescription({
 
   const validateTransitions = () => {
     if (onValidateGraph && !onValidateGraph()) { setElementsValid(false); return; }
-    const errs = {};
-    transitions.forEach((t, i) => {
-      const key = String(i);
-      const c = cells[key] || { dest: '', push: '' };
-      const okDest = c.dest.trim() === toLabel(t.to);
-      const okPush = normLambda(c.push) === normLambda(t.push);
-      if (!okDest || !okPush) errs[key] = true;
-    });
-    setCellErrors(errs);
-    if (Object.keys(errs).length) { showToast?.(`${Object.keys(errs).length} transição(ões) incorreta(s).`, 'error'); return; }
+    const res = validateApFormalTransitions({ transitions, nodes, cells });
+    if (!res.ok) {
+      setCellErrors(res.cellErrors);
+      showToast?.(`${Object.keys(res.cellErrors).length} transição(ões) incorreta(s).`, 'error');
+      return;
+    }
+    setCellErrors({});
     onSuccess?.(); // ★3
     onClose?.();
   };
