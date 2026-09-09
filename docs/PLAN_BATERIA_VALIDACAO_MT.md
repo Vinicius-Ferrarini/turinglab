@@ -162,12 +162,39 @@ confirmado sensível ao fix (falha sem "bbaa" em `acceptedWords`, passa com).
 mutado isolado, confirmado sensível ao fix. **Feito:** commit `782d7b8`.
 Suíte e2e completa: 81/81.
 
-**Pendência registrada (não fechada nesta rodada):** reduzir o teto do
-ratchet (`KNOWN_WRITE_GAP_CEILING`) nos 14 níveis afetados exige expandir
-`testWords` pra exercitar toda combinação de dígito/carry das tabelas —
-trabalho de conteúdo por nível (potencialmente grande em L11/L17-L23),
-não decidido/priorizado ainda. Ver §4 de "Decisão" — mesma técnica
-BFS+oráculo recomendada ali serviria aqui.
+**Pendência fechada** (rodada seguinte, a pedido do usuário — "Pode fazer
+agora"): usando BFS sobre o alfabeto de cada nível + `level.validate()`
+como oráculo (greedy set-cover — mesma técnica recomendada em §4), 12 dos
+14 níveis foram fechados a 0 gaps:
+
+- **L06** (commit `4b99d21`): 4 palavras novas (`aa`,`ba`,`bb`,`cc`).
+- **L11** (commit `b3cad6e`): só 4 dos 90 gaps eram alcançáveis (`0`,`.`
+  fecham) — os outros 86 leem caractere FORA do alfabeto oficialmente
+  declarado (gabarito marcado como não-oficial no cabeçalho do arquivo,
+  pendente de validação com o professor) — documentado, não forçado.
+- **L12/L14** (commit `61f84c8`): +15/+25 palavras (incremento decimal/hex).
+- **L16-L23/L24** (commit `3748e84`) — achado extra: `_decimalMult.js`
+  (gerador de L17-L23) já tinha uma função `coverageBattery()` calculando
+  a bateria matematicamente exata pra 100% da tabela de carry, mas ela só
+  alimentava a AULA guiada, nunca o `testWords` real de validação —
+  **exatamente o mesmo padrão do bug original do L06** (bateria completa
+  existia no código, só não estava ligada à validação do aluno). Uma
+  correção de 1 linha fechou os 7 níveis de uma vez. L16 (standalone) e
+  L24 fechados à parte.
+
+**Restam 2 níveis com teto > 0, ambos por motivo estrutural documentado,
+não por falta de esforço:**
+- **L10** (teto 4): decisão pré-existente (`KNOWN_PENDING_UNDEMONSTRATED`,
+  anterior a esta rodada) — fechar exigiria ~185 micro-passos extras na
+  aula guiada pra uma ordem de decodificação específica; considerado não
+  vantajoso.
+- **L11** (teto 86): estruturalmente inalcançável dado o alfabeto
+  declarado (ver acima) — não é uma lacuna de teste, é uma decisão de
+  conteúdo (expandir o alfabeto oficial da cifra) que não me cabe tomar
+  sozinho, ainda mais com o gabarito já marcado como não-oficial.
+
+Suíte completa depois de tudo: `npm test` 2129/2129, `npx playwright test`
+81/81, 0 regressão.
 
 ### 3.3 — Fora de escopo desta rodada (registrado, não abandonado)
 
