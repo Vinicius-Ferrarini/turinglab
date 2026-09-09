@@ -240,5 +240,16 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       erros). `npm test`: 2076/2076. `npx playwright test`: **71/71
       passando** (specs da Fase A inteiros, confirmando que os novos botões
       no header não quebraram nenhum seletor/fluxo existente).
-- [ ] **9. E2E Playwright (Feature B)** — `e2e/export_import_json.spec.js`
+- [x] **9. E2E Playwright (Feature B)** — `e2e/export_import_json.spec.js` ✅
+      3 testes: (1) exportar captura o evento `download` do Playwright,
+      confere o nome do arquivo (`turinglab_afd-p1_<id>_<timestamp>.json`) e
+      o conteúdo (`schemaVersion`, `app`, `moduleKey`, `payload.nodes`,
+      `isDrawingUnlocked`); (2) reimportar o MESMO arquivo restaura o
+      estado idêntico — isolado de propósito do autosave da Fase A
+      (`localStorage.clear()` antes de reabrir a fase, pra garantir que
+      quem restaura ali é o import, não a sessão salva automaticamente);
+      (3) importar um arquivo de OUTRA fase é bloqueado com toast de erro
+      claro ("outra fase"), sem alterar em nada o estado da fase atual.
+      Testes: `npx playwright test` — **74/74 passando** (3 novos +
+      todos os 71 já existentes, zero regressão). `npm test`: 2076/2076.
 - [ ] **10. Fechamento** — CLAUDE.md, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e`
