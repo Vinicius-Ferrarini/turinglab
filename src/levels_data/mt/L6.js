@@ -13,7 +13,7 @@ const MT_L6 = {
   description: "Tem como entrada uma palavra qualquer com a, b e c, e gera como saída a palavra duplicada – Duplicar palavra ww.",
   hint:        "Marque cada símbolo, copie-o para o final da fita, e repita até marcar todos.",
   validate:    (w) => w+w,
-  testWords:   ["a","ab","abc","cab"],
+  testWords:   ["a","ab","abc","cab","aa","ba","bb","cc"],
   skipEmptyWord: true,
   formalDescription: {
     sigma:   '{a,b,c}',

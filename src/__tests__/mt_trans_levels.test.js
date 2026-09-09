@@ -115,7 +115,7 @@ function pickSabotageSymbol(original, tapeAlphabet) {
 // pode aumentar) mas não finge que já está tudo coberto. Ao adicionar
 // testWords que fechem gaps de um nível, DIMINUA o número correspondente.
 const KNOWN_WRITE_GAP_CEILING = {
-  L06: 8, L10: 4, L11: 90, L12: 22, L14: 36, L16: 17, L17: 27, L18: 38,
+  L10: 4, L11: 90, L12: 22, L14: 36, L16: 17, L17: 27, L18: 38,
   L19: 48, L20: 59, L21: 70, L22: 81, L23: 91, L24: 1,
 };
 
