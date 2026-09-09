@@ -192,7 +192,25 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       Testes: `npx playwright test` — **71/71 passando** (14 arquivos de
       spec — os 4 novos com 23 testes + os 10 já existentes com 48, zero
       regressão). `npm test`: 2055/2055 (sem mudança nesta etapa, só E2E).
-- [ ] **7. `exportImportFile.js`** + testes unitários (serialização/validação)
+- [x] **7. `exportImportFile.js`** + testes unitários (serialização/validação) ✅
+      TDD: `src/__tests__/exportImportFile.test.js` (17 testes, confirmado
+      falhando por módulo inexistente antes de implementar). Reaproveita
+      `isValidSnapshot` de `sessionSnapshot.js` (mesmo envelope da Feature A)
+      — este arquivo cobre só a parte específica de arquivo:
+      `buildExportFilename` (`turinglab_<moduleKey>_<levelId>_<timestamp>.json`),
+      `checkFileSize` (rejeita ANTES de ler, limite 5MB), `checkPayloadSanity`
+      (array >20000 entradas ou aninhamento >20 níveis — proteção contra
+      JSON-bomb tecnicamente válido, sem estourar a pilha), e
+      `parseImportedSnapshot` (só `JSON.parse`, nunca `eval`/`new Function` —
+      testado explicitamente com string maliciosa) cobrindo todos os casos
+      pedidos: schema errado, JSON corrompido, `moduleKey` de outro módulo,
+      `levelId` diferente do nível aberto — em toda rejeição `snapshot` fica
+      `undefined` (nunca aplicado parcialmente). `downloadSnapshotFile`/
+      `readImportedFile` (glue de Blob/URL/FileReader/`document`) ficam
+      isolados sem teste unitário próprio, mesmo padrão de
+      `storageAdapter.js` — cobertura via Playwright no item 9.
+      Testes: `npx vitest run exportImportFile.test.js` 17/17. `npm test`
+      completo: **2072/2072 passando** (26 arquivos) — sem regressão.
 - [ ] **8. UI de exportar/importar** — botão no `GameHeader.jsx`
 - [ ] **9. E2E Playwright (Feature B)** — `e2e/export_import_json.spec.js`
 - [ ] **10. Fechamento** — CLAUDE.md, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e`
