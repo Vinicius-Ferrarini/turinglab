@@ -19,7 +19,9 @@ import useAFDGraph, { lvlAccepts, validateAFDPure } from './hooks/useAFDGraph';
 import useCanvasState from './hooks/useCanvasState';
 import { traceWord } from './utils/traceWord';
 import { buildNoAttemptHintMessage, buildSizeHintMessage } from './utils/sizeHint';
+import { EMPTY_FORMAL_STATE } from './utils/formalDescriptionLogic';
 import useWordGuessGame from '../shared/useWordGuessGame';
+import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
 import { findSecondShortestWord } from '../shared/wordExercises/findSecondShortestWord.js';
 import { UNAVAILABLE_LEVELS, HIDDEN_LEVELS, LEVEL_DIFFICULTY, DIFF_COLOR } from '../../levels';
 import { AFD_LEVELS as GAME_LEVELS } from '../../levels_data/afd/index.js';
@@ -28,6 +30,28 @@ import { logEvent } from '../../services/telemetry';
 // ─── Utilitário: gera um UID curto ───────────────────────────────────────────
 let _uidCounter = 0;
 const genUid = () => `_n${++_uidCounter}_${Math.random().toString(36).slice(2, 6)}`;
+
+// Baralho de cartas do rodapé quando o tabuleiro está destravado — depende só
+// de `level` (allowedCards/alphabet), então é reaproveitado tanto pelo
+// unlock() normal (handleTestWord) quanto pela hidratação de sessão salva
+// (loadLevel: isDrawingUnlocked=true restaurado precisa repopular as cartas,
+// senão o canvas aparece destravado sem nenhuma carta pra jogar).
+function buildDrawnCards(level) {
+  const allowed = level?.allowedCards;
+  const initialCards = [
+    { id: 'c0', type: 'action', action: 'toggleInitial', icon: '▶', label: 'Estado Inicial' },
+    { id: 'c3', type: 'action', action: 'toggleFinal',   icon: '◎', label: 'Definir Final' },
+    { id: 'c1', type: 'action', action: 'addNode',       icon: '◯', label: 'Novo Estado' },
+    { id: 'c2', type: 'action', action: 'addTransition', icon: '↗', label: 'Criar Seta' },
+    { id: 'c4', type: 'action', action: 'erase',         icon: '🗑', label: 'Apagar' },
+    { id: 'cu', type: 'action', action: 'undo',          icon: '↶', label: 'Desfazer' },
+    { id: 'cr', type: 'action', action: 'redo',          icon: '↷', label: 'Refazer' },
+  ].filter(c => !allowed || allowed.includes(c.action));
+  const symbolCards = (level?.alphabet || []).map((sym, i) => ({
+    id: `s${i}`, type: 'symbol', symbol: sym, label: `Símbolo ${sym}`,
+  }));
+  return [...initialCards, { type: 'separator', id: 'sep1' }, ...symbolCards];
+}
 
 // Dimensões lógicas do canvas interno (devem casar com INNER_W/INNER_H de CanvasArea.jsx)
 const INNER_W = 8000;
@@ -133,6 +157,10 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
   const [professorMessage, setProfessorMessage] = useState('');
   const [showVictoryScreen, setShowVictoryScreen]     = useState(false);
   const [showImpossibleScreen, setShowImpossibleScreen] = useState(false);
+  // Snapshot do formulário da Descrição Formal, içado do FormalDescriptionModal
+  // (componente controlado — ver ADR 0011 §3.1) via onStateChange. null =
+  // formulário nunca tocado nesta fase (payload salva EMPTY_FORMAL_STATE).
+  const [formalSnapshot, setFormalSnapshot] = useState(null);
   const isTableFocusedRef = useRef(false);
   const tableBlurTimeoutRef = useRef(null);
 
@@ -262,6 +290,21 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     phaseStartRef, attemptsRef, tutorialOpensRef, errorSinceTutorialRef,
   });
 
+  // ── Persistência de sessão (autosave debounced — ver ADR 0011) ─────────────
+  // Salva EXATAMENTE o que está no canvas, mesmo estruturalmente inválido —
+  // nunca valida antes de salvar. uid não entra no payload (nodes/transitions
+  // já não carregam uid neste módulo; genUid() é regenerado ao hidratar).
+  const sessionPayload = useMemo(() => ({
+    nodes, transitions, testWords,
+    isDrawingUnlocked, hintStage: wordleGame.hintStage,
+    showVictoryScreen, showImpossibleScreen,
+    formal: formalSnapshot ?? EMPTY_FORMAL_STATE,
+  }), [nodes, transitions, testWords, isDrawingUnlocked, wordleGame.hintStage,
+      showVictoryScreen, showImpossibleScreen, formalSnapshot]);
+  const { clearSession } = useLevelSessionPersistence({
+    moduleKey: 'afd-p1', levelId: currentLevel?.id ?? null, payload: sessionPayload, levelLabel: currentLevel?.label,
+  });
+
   // ── Carrega fase ──────────────────────────────────────────────────────────
   const loadLevel = useCallback((level) => {
     _uidCounter = 0;
@@ -306,7 +349,30 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     userNodesSnapshot.current = null;
     userTransitionsSnapshot.current = null;
     isTableFocusedRef.current = false;
-  }, [resetHistory, resetDraw, resetZoom]);
+
+    // ── Hidrata sessão salva (se houver), depois do reset em branco acima ────
+    const restored = readLevelSession('afd-p1', level.id);
+    if (restored) {
+      const restoredNodes = restored.nodes ?? [];
+      const restoredTransitions = restored.transitions ?? [];
+      setNodes(restoredNodes);
+      setTransitions(restoredTransitions);
+      resetHistory(restoredNodes, restoredTransitions);
+      setTestWords(restored.testWords ?? []);
+      setIsDrawingUnlocked(!!restored.isDrawingUnlocked);
+      // Tabuleiro restaurado destravado precisa repopular as cartas do
+      // rodapé (só existem no state normalmente via unlock() — ver
+      // buildDrawnCards acima), senão o canvas aparece destravado sem nada
+      // pra jogar.
+      setDrawnCards(restored.isDrawingUnlocked ? buildDrawnCards(level) : []);
+      wordleGame.setHintStage(restored.hintStage ?? 0);
+      setShowVictoryScreen(!!restored.showVictoryScreen);
+      setShowImpossibleScreen(!!restored.showImpossibleScreen);
+      setFormalSnapshot(restored.formal ?? null);
+    } else {
+      setFormalSnapshot(null);
+    }
+  }, [resetHistory, resetDraw, resetZoom, wordleGame]);
 
   // ── Modo forçado (ex.: Boss/Trabalho): pula o menu interno e entra direto
   // no nível indicado. Só roda uma vez ao montar — o componente é remontado
@@ -443,20 +509,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
         const unlock = () => {
           setIsDrawingUnlocked(true);
           showToast('Sucesso! Tabuleiro liberado.', 'success');
-          const allowed = currentLevel.allowedCards;
-          const initialCards = [
-            { id: 'c0', type: 'action', action: 'toggleInitial', icon: '▶', label: 'Estado Inicial' },
-            { id: 'c3', type: 'action', action: 'toggleFinal',   icon: '◎', label: 'Definir Final' },
-            { id: 'c1', type: 'action', action: 'addNode',       icon: '◯', label: 'Novo Estado' },
-            { id: 'c2', type: 'action', action: 'addTransition', icon: '↗', label: 'Criar Seta' },
-            { id: 'c4', type: 'action', action: 'erase',         icon: '🗑', label: 'Apagar' },
-            { id: 'cu', type: 'action', action: 'undo',          icon: '↶', label: 'Desfazer' },
-            { id: 'cr', type: 'action', action: 'redo',          icon: '↷', label: 'Refazer' },
-          ].filter(c => !allowed || allowed.includes(c.action));
-          const symbolCards = (currentLevel.alphabet || []).map((sym, i) => ({
-            id: `s${i}`, type: 'symbol', symbol: sym, label: `Símbolo ${sym}`,
-          }));
-          setDrawnCards([...initialCards, { type: 'separator', id: 'sep1' }, ...symbolCards]);
+          setDrawnCards(buildDrawnCards(currentLevel));
         };
         // Grade WordleBoard: segura a última linha (toda verde) visível por
         // um instante antes de destravar — sem o delay, o overlay some
@@ -707,6 +760,8 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
             showToast={showToast}
             onValidateGraph={() => validateAFDSilent(true)}
             demo={lessonActive && lessonPhase === 'FORMAL' ? lessonReveal : null}
+            initialValues={formalSnapshot}
+            onStateChange={setFormalSnapshot}
             onTableFocusChange={v => {
               if (v) {
                 clearTimeout(tableBlurTimeoutRef.current);
@@ -901,8 +956,8 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
           balloon={{ width: 320, height: 220, marginTop: -150 }}
           textStyle={{ padding: '20px 38px 52px', fontSize: 15 }}
           nextPrefix="Entendido! Próxima: "
-          onMenu={() => { setShowImpossibleScreen(false); forceLevelId != null ? onBack() : setTela('MENU'); }}
-          onNext={next => { setShowImpossibleScreen(false); loadLevel(next); }}
+          onMenu={() => { clearSession(); setShowImpossibleScreen(false); forceLevelId != null ? onBack() : setTela('MENU'); }}
+          onNext={next => { clearSession(); setShowImpossibleScreen(false); loadLevel(next); }}
         />
       )}
 
@@ -915,8 +970,8 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
           balloon={{ width: 300, height: 210, marginTop: -140 }}
           textStyle={{ padding: '18px 36px 48px', fontSize: 17 }}
           nextPrefix="Próxima: "
-          onMenu={() => { setShowVictoryScreen(false); forceLevelId != null ? onBack() : setTela('MENU'); }}
-          onNext={next => { setShowVictoryScreen(false); loadLevel(next); }}
+          onMenu={() => { clearSession(); setShowVictoryScreen(false); forceLevelId != null ? onBack() : setTela('MENU'); }}
+          onNext={next => { clearSession(); setShowVictoryScreen(false); loadLevel(next); }}
         />
       )}
     </div>

@@ -95,7 +95,64 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       test` completo: **2055/2055 passando** (25 arquivos, incluindo os 21
       testes novos e o guard-rail `formalDescription.test.js` inteiro
       verde) — sem regressão.
-- [ ] **5. `useLevelSessionPersistence.js`** + integração nos 4 `loadLevel`
+- [x] **5. `useLevelSessionPersistence.js`** + integração nos 4 `loadLevel` ✅
+      Hook fino: `useEffect` de autosave debounced (~500ms) grava
+      `buildSnapshot(moduleKey, levelId, payload)` sob
+      `turinglab_session_v1:<moduleKey>:<levelId>` via `safeSetItem`. A
+      HIDRATAÇÃO é imperativa, não parte do efeito do hook — exportei
+      `readLevelSession(moduleKey, levelId)` (função pura, não-hook) chamada
+      dentro de cada `loadLevel`, exatamente como o prompt pedia (síncrona
+      pros 2 primeiros, depois do `await` pros 2 de MT); e `clearLevelSession`
+      usada pelo `clearSession()` retornado do hook.
+      Integração nos 4 orquestradores:
+      - **AFDPart1.jsx**: `sessionPayload` memoizado (`nodes`, `transitions`,
+        `testWords`, `isDrawingUnlocked`, `hintStage` do `wordleGame`,
+        `showVictoryScreen`, `showImpossibleScreen`, `formal`). Hidratação no
+        fim de `loadLevel` (depois do reset em branco), incluindo
+        `resetHistory(restoredNodes, restoredTransitions)` pra não deixar o
+        histórico de undo apontando pro grafo vazio.
+        **Achado durante a implementação, não previsto no schema do
+        prompt**: `isDrawingUnlocked: true` restaurado sem repopular
+        `drawnCards` deixaria o tabuleiro destravado mas sem nenhuma carta
+        jogável no rodapé (`drawnCards` só existia como efeito colateral do
+        `unlock()` inline em `handleTestWord`, nunca como função
+        reaproveitável). Extraí `buildDrawnCards(level)` (função de módulo)
+        e chamei tanto do `unlock()` quanto da hidratação — sem isso a
+        Feature A quebraria visivelmente o tabuleiro em todo nível já
+        destravado antes do F5.
+      - **APPart1.jsx**: mesmo padrão, com `g.reset(initial)` já hidratando
+        o grafo (item 3) — `readLevelSession` chamado ANTES do `g.reset()`
+        pra decidir o argumento certo numa única chamada (evita resetar
+        2×). `wordleGame.setHintStage(restored?.hintStage ?? 0)` no lugar
+        de `wordleGame.reset()` (equivalente quando não há sessão — `reset`
+        só faz `setHintStage(0)`). `formalSnapshot` içado (item 4) entra no
+        payload e é repassado como `initialValues` pro `APFormalDescription`.
+      - **MTReconPart1.jsx**/**MTPart1.jsx**: hidratação só depois do
+        `await loadMTReconLevel(...)`/`await loadMTLevel(...)` resolver —
+        `formal` já vivia no orquestrador (`formalAnswers`/
+        `formalElementsValid`), só copiado pro payload/restaurado direto.
+        MT Transdutora sem `isDrawingUnlocked`/`hintStage` (não tem a
+        mecânica — ver CLAUDE.md).
+      Limpeza da sessão: `clearSession()` chamado nos 2 handlers
+      (`onMenu`/`onNext`) de TODO `EndScreen` de fim de fase em cada módulo —
+      inclusive a tela "Impossível" do AFD (L14), por decisão própria
+      registrada aqui (o prompt só cita "tela de vitória" explicitamente,
+      mas a tela Impossível também é um estado terminal de fase com estrela
+      já concedida — mesma regra "fase concluída reabre em branco" já vale
+      pra ela hoje via `turinglab_progress`; tratar diferente criaria uma
+      inconsistência sem motivo).
+      Sem teste unitário próprio (hook React + localStorage/timers — como
+      previsto no prompt); cobertura via Playwright no item 6.
+      Testes: `npx eslint` nos 4 orquestradores + `useLevelSessionPersistence.js`
+      — comparado antes/depois via `git stash` (CLAUDE.md): **38→36
+      warnings no repo inteiro** (2 a menos — corrigi de passagem uma dep
+      `wordleGame` ausente pré-existente no AP e no MT-Recon), 0 erros nos
+      dois casos. `npm test`: **2055/2055 passando** (25 arquivos). `npm run
+      build`: limpo, chunk principal ~549 KB raw idêntico ao baseline antes
+      desta tarefa (confirmado via `git stash` — não é regressão minha, é o
+      tamanho real atual do projeto; `OPTIMIZATION_PROGRESS.md` está
+      desatualizado desde então). Novo chunk lazy
+      `useLevelSessionPersistence-*.js` (~8 KB) não entra no chunk principal.
 - [ ] **6. E2E Playwright (Feature A)** — 4 specs, um por módulo
 - [ ] **7. `exportImportFile.js`** + testes unitários (serialização/validação)
 - [ ] **8. UI de exportar/importar** — botão no `GameHeader.jsx`

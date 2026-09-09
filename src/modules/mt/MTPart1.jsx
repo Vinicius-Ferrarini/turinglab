@@ -2,7 +2,7 @@
 // Fluxo: menu → escolher nível → desenhar MT no canvas → Validar (★★★).
 // Validação via fuzzTMTransducer (bateria de testWords).
 // Modo Aula: overlay com grafo demonstrativo + animação da fita passo a passo.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import '../afd/AFDPart1.css';
 import '../afd/components/TestPanel.css';
@@ -26,6 +26,7 @@ import { validateMTFormalFields, validateMTFormalTransitions } from './utils/mtF
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
 import { logEvent } from '../../services/telemetry';
+import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
 
 // Estado inicial vazio do formulário da descrição formal (7-tupla)
 // deltaCells: mapa "estado|símbolo" → "destino, escreve, move" (matriz δ)
@@ -121,6 +122,20 @@ export default function MTPart1({ onBack, progress, updateProgress,
   const { phaseExtras, logTutorialOpen } = usePhaseTelemetry({
     modulo: 'mt-trans', nivelId: level?.id, dificuldade: level?.level ?? null,
     phaseStartRef, attemptsRef, tutorialOpensRef, errorSinceTutorialRef,
+  });
+
+  // ── Persistência de sessão (autosave debounced — ver ADR 0011) ─────────────
+  // Sem isDrawingUnlocked/hintStage: MT Transdutora não tem a mecânica de
+  // "descubra a menor palavra" (isDrawingUnlocked é sempre true — ver
+  // CLAUDE.md, "Star count for MT Transducer").
+  const sessionPayload = useMemo(() => ({
+    nodes: g.nodes, transitions: g.transitions,
+    linguagemTests, desenhoTests, activeTab, victory,
+    formal: { formalAnswers, formalElementsValid },
+  }), [g.nodes, g.transitions, linguagemTests, desenhoTests, activeTab, victory,
+      formalAnswers, formalElementsValid]);
+  const { clearSession } = useLevelSessionPersistence({
+    moduleKey: 'mt-trans', levelId: level?.id ?? null, payload: sessionPayload, levelLabel: level?.label,
   });
 
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
@@ -238,7 +253,10 @@ export default function MTPart1({ onBack, progress, updateProgress,
   // só no caso raro de clique antes do prefetch terminar).
   const loadLevel = useCallback(async (lvOrId) => {
     const lv = typeof lvOrId === 'string' ? await loadMTLevel(lvOrId) : lvOrId;
-    g.reset();
+    // Hidratação SÓ depois do await acima resolver (id cru vindo do Boss) —
+    // ver ADR 0011/§4 do prompt original.
+    const restored = readLevelSession('mt-trans', lv.id);
+    g.reset(restored ? { nodes: restored.nodes ?? [], transitions: restored.transitions ?? [] } : undefined);
     lesson.reset();
     // Telemetria: início da fase + reset de contadores.
     phaseStartRef.current = performance.now();
@@ -252,10 +270,17 @@ export default function MTPart1({ onBack, progress, updateProgress,
       dificuldade: lv.level ?? null,
     });
     setLevel(lv); setScreen('GAME'); setMode('IDLE'); setConnectingSource(null);
-    setSimWord(''); setLinguagemTests([]); setDesenhoTests([]); setDeckGhost(null); setVictory(false);
+    setSimWord('');
+    setLinguagemTests(restored?.linguagemTests ?? []);
+    setDesenhoTests(restored?.desenhoTests ?? []);
+    setActiveTab(restored?.activeTab ?? 'linguagem');
+    setDeckGhost(null);
+    setVictory(!!restored?.victory);
     setSelectedNodes([]); setSelectionBox(null);
-    setFormalAnswers(EMPTY_FORMAL); setFormalMode(false);
-    setFormalElementsValid(false); setFieldErrors({}); setCellErrors({});
+    setFormalAnswers(restored?.formal?.formalAnswers ?? EMPTY_FORMAL);
+    setFormalMode(false);
+    setFormalElementsValid(!!restored?.formal?.formalElementsValid);
+    setFieldErrors({}); setCellErrors({});
     draw.resetDrawings();
     resetZoom();
     say(`Monte a MT Transdutora que ${lv.description.toLowerCase()} e clique em Validar!`, 'explicando');
@@ -1030,8 +1055,8 @@ export default function MTPart1({ onBack, progress, updateProgress,
           balloon={{ width: 320, height: 220, marginTop: -150 }}
           textStyle={{ padding: '20px 38px 52px', fontSize: 15 }}
           nextPrefix="Próximo: "
-          onMenu={() => { setVictory(false); setScreen('MENU'); }}
-          onNext={(lv) => loadLevel(lv)}
+          onMenu={() => { clearSession(); setVictory(false); setScreen('MENU'); }}
+          onNext={(lv) => { clearSession(); loadLevel(lv); }}
         />
       )}
     </div>

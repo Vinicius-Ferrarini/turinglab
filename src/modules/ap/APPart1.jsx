@@ -25,11 +25,13 @@ import { buildNoAttemptHintMessage, buildSizeHintMessage } from '../afd/utils/si
 import useWordGuessGame from '../shared/useWordGuessGame';
 import { findSecondShortestWord } from '../shared/wordExercises/findSecondShortestWord';
 import { pdaAccepts, pdaAcceptingRun, pdaRejectingTrace } from './utils/pdaAlgorithms';
+import { EMPTY_AP_FORMAL_STATE } from './utils/apFormalDescriptionLogic';
 import { DIFF_COLOR } from '../../levels';
 import GameHeader from '../afd/components/GameHeader';
 import useToast from '../afd/hooks/useToast';
 import usePhaseTelemetry from '../afd/hooks/usePhaseTelemetry';
 import { logEvent } from '../../services/telemetry';
+import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
 
 export default function APPart1({ onBack, progress, updateProgress, forceLevelId, forceLevelLabel, onForcedPrev, onForcedNext, forceLabelColor }) {
   // ── Toast (local, ignora o showToast no-op do App.jsx) ─
@@ -57,6 +59,9 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
   const [victory, setVictory]       = useState(false);
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [selectionBox, setSelectionBox]   = useState(null);
+  // Snapshot do formulário da Descrição Formal, içado do APFormalDescription
+  // (componente controlado — ver ADR 0011 §3.1) via onStateChange.
+  const [formalSnapshot, setFormalSnapshot] = useState(null);
   const canvasRef = useRef(null);
   const innerCanvasRef = useRef(null);
   const viewportRef = useRef(null);
@@ -130,6 +135,18 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
   const { phaseExtras, logTutorialOpen } = usePhaseTelemetry({
     modulo: 'ap', nivelId: level?.id, dificuldade: level?.level ?? null,
     phaseStartRef, attemptsRef, tutorialOpensRef, errorSinceTutorialRef,
+  });
+
+  // ── Persistência de sessão (autosave debounced — ver ADR 0011) ─────────────
+  const sessionPayload = useMemo(() => ({
+    nodes: g.nodes, transitions: g.transitions, testedWords,
+    isDrawingUnlocked, hintStage: wordleGame.hintStage,
+    testMode, victory,
+    formal: formalSnapshot ?? EMPTY_AP_FORMAL_STATE,
+  }), [g.nodes, g.transitions, testedWords, isDrawingUnlocked, wordleGame.hintStage,
+      testMode, victory, formalSnapshot]);
+  const { clearSession } = useLevelSessionPersistence({
+    moduleKey: 'ap', levelId: level?.id ?? null, payload: sessionPayload, levelLabel: level?.label,
   });
 
   // ── Modo Aula: iniciar / sair / navegar (narração + painel formal sem efeito) ─
@@ -222,7 +239,10 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
 
   // ── Carregar exercício ──────────────────────────────────────────────────────
   const loadLevel = useCallback((lv) => {
-    g.reset();
+    // Sessão salva (se houver) — lida ANTES do reset pra já hidratar o grafo
+    // direto em `present` (g.reset(initial), sem passar por `past`/histórico).
+    const restored = readLevelSession('ap', lv.id);
+    g.reset(restored ? { nodes: restored.nodes ?? [], transitions: restored.transitions ?? [] } : undefined);
     lessonReset();
     // Telemetria: início da fase + reset de contadores.
     phaseStartRef.current = performance.now();
@@ -238,16 +258,19 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
     });
     setLevel(lv); setScreen('GAME'); setMode('IDLE'); setConnectingSource(null);
     setSim(null); setSimHighlight({ nodeId: null, type: null, tIdx: null });
-    setSimWord(''); setFormalOpen(false); setDeckGhost(null); setVictory(false);
+    setSimWord(''); setFormalOpen(false); setDeckGhost(null);
+    setVictory(!!restored?.victory);
     setSelectedNodes([]); setSelectionBox(null);
-    setTestedWords([]);
-    setTestMode('LANGUAGE');
+    setTestedWords(restored?.testedWords ?? []);
+    setTestMode(restored?.testMode ?? 'LANGUAGE');
     clearTimeout(unlockDelayRef.current);
     lastAttemptRef.current = null;
-    wordleGame.reset();
+    wordleGame.setHintStage(restored?.hintStage ?? 0);
     // L16 (impossível) não tem tabuleiro a desenhar — não precisa da mecânica
-    // de "descubra a menor palavra" pra destravar. Os demais começam travados.
-    setIsDrawingUnlocked(!!lv.impossible);
+    // de "descubra a menor palavra" pra destravar. Os demais começam travados,
+    // exceto se a sessão salva já os tinha destravado.
+    setIsDrawingUnlocked(restored ? !!restored.isDrawingUnlocked : !!lv.impossible);
+    setFormalSnapshot(restored?.formal ?? null);
     draw.resetDrawings();
     resetZoom();
     // Níveis travados já mostram "descubra a menor palavra" no locked-overlay do
@@ -259,7 +282,7 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
       ? `${lv.language} é IMPOSSÍVEL com Autômato com Pilha — precisa de Máquina de Turing (MT).`
       : '',
       'serio');
-  }, [g, draw, say, lessonReset, resetZoom]);
+  }, [g, draw, say, lessonReset, resetZoom, wordleGame]);
 
   const goLevel = useCallback((dir) => {
     const idx = AP_LEVELS.findIndex(l => l.id === level?.id);
@@ -610,6 +633,8 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
             onElementsSuccess={onFormalElements}
             onSuccess={onFormalDone}
             showToast={showToast}
+            initialValues={formalSnapshot}
+            onStateChange={setFormalSnapshot}
           />
         </aside>
 
@@ -814,8 +839,8 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
           balloon={{ width: 320, height: 220, marginTop: -150 }}
           textStyle={{ padding: '20px 38px 52px', fontSize: 15 }}
           nextPrefix="Próximo: "
-          onMenu={() => { setVictory(false); forceLevelId != null ? onBack() : setScreen('MENU'); }}
-          onNext={(lv) => loadLevel(lv)}
+          onMenu={() => { clearSession(); setVictory(false); forceLevelId != null ? onBack() : setScreen('MENU'); }}
+          onNext={(lv) => { clearSession(); loadLevel(lv); }}
         />
       )}
     </div>

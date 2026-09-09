@@ -34,6 +34,7 @@ import { validateMTFormalFields, validateMTFormalTransitions } from '../mt/utils
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
 import { logEvent } from '../../services/telemetry';
+import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
 
 const SIM_MAX_STEPS = 500;
 
@@ -171,6 +172,18 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
     phaseStartRef, attemptsRef, tutorialOpensRef, errorSinceTutorialRef,
   });
 
+  // ── Persistência de sessão (autosave debounced — ver ADR 0011) ─────────────
+  const sessionPayload = useMemo(() => ({
+    nodes: g.nodes, transitions: g.transitions, testedWords,
+    isDrawingUnlocked, hintStage: wordleGame.hintStage,
+    testMode, victory,
+    formal: { formalAnswers, formalElementsValid },
+  }), [g.nodes, g.transitions, testedWords, isDrawingUnlocked, wordleGame.hintStage,
+      testMode, victory, formalAnswers, formalElementsValid]);
+  const { clearSession } = useLevelSessionPersistence({
+    moduleKey: 'mt-recon', levelId: level?.id ?? null, payload: sessionPayload, levelLabel: level?.label,
+  });
+
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
   const applyStep = useCallback((st) => {
     if (!st) return;
@@ -281,7 +294,10 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
   // em MTPart1.jsx.
   const loadLevel = useCallback(async (lvOrId) => {
     const lv = typeof lvOrId === 'string' ? await loadMTReconLevel(lvOrId) : lvOrId;
-    g.reset();
+    // Hidratação SÓ depois do await acima resolver (id cru vindo do Boss) —
+    // ver ADR 0011/§4 do prompt original.
+    const restored = readLevelSession('mt-recon', lv.id);
+    g.reset(restored ? { nodes: restored.nodes ?? [], transitions: restored.transitions ?? [] } : undefined);
     lesson.reset();
     // Telemetria: início da fase + reset de contadores.
     phaseStartRef.current = performance.now();
@@ -296,17 +312,23 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
       dificuldade: lv.level ?? null,
     });
     setLevel(lv); setScreen('GAME'); setMode('IDLE'); setConnectingSource(null);
-    setSimWord(''); setTestedWords([]); setDeckGhost(null); setVictory(false);
+    setSimWord('');
+    setTestedWords(restored?.testedWords ?? []);
+    setDeckGhost(null);
+    setVictory(!!restored?.victory);
     setSelectedNodes([]); setSelectionBox(null);
-    setTestMode('LANGUAGE'); setIsDrawingUnlocked(false);
+    setTestMode(restored?.testMode ?? 'LANGUAGE');
+    setIsDrawingUnlocked(!!restored?.isDrawingUnlocked);
     clearTimeout(unlockDelayRef.current);
-    wordleGame.reset();
-    setFormalAnswers(EMPTY_FORMAL); setFormalMode(false);
-    setFormalElementsValid(false); setFieldErrors({}); setCellErrors({});
+    wordleGame.setHintStage(restored?.hintStage ?? 0);
+    setFormalAnswers(restored?.formal?.formalAnswers ?? EMPTY_FORMAL);
+    setFormalMode(false);
+    setFormalElementsValid(!!restored?.formal?.formalElementsValid);
+    setFieldErrors({}); setCellErrors({});
     draw.resetDrawings();
     resetZoom();
     say('', 'serio');
-  }, [g, lesson, draw, say, resetZoom]);
+  }, [g, lesson, draw, say, resetZoom, wordleGame]);
 
   const goLevel = useCallback((dir) => {
     const idx = mtReconLevels.findIndex(l => l.id === level?.id);
@@ -1106,8 +1128,8 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
           balloon={{ width: 320, height: 220, marginTop: -150 }}
           textStyle={{ padding: '20px 38px 52px', fontSize: 15 }}
           nextPrefix="Próximo: "
-          onMenu={() => { setVictory(false); setScreen('MENU'); }}
-          onNext={(lv) => loadLevel(lv)}
+          onMenu={() => { clearSession(); setVictory(false); setScreen('MENU'); }}
+          onNext={(lv) => { clearSession(); loadLevel(lv); }}
         />
       )}
     </div>
