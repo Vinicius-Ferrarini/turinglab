@@ -59,7 +59,12 @@ export default function App() {
   const progressRef = useRef(progress);
   useEffect(() => { progressRef.current = progress; }, [progress]);
 
-  const updateProgress = useCallback((moduleId, stars, extras = {}) => {
+  // logTelemetry=false (ADR 0012): usado ao restaurar estrelas de um arquivo
+  // importado — não é o aluno terminando a fase agora, é dado histórico
+  // voltando, então não deve gerar um evento `fim_fase` (distorceria a
+  // telemetria de pesquisa). O resto do comportamento (nunca regride,
+  // localStorage) é idêntico nos dois casos.
+  const updateProgress = useCallback((moduleId, stars, extras = {}, logTelemetry = true) => {
     const previousStars = progressRef.current[moduleId]?.stars || 0;
     setProgress(prev => {
       const cur = prev[moduleId]?.stars || 0;
@@ -68,6 +73,7 @@ export default function App() {
       localStorage.setItem('turinglab_progress', JSON.stringify(next));
       return next;
     });
+    if (!logTelemetry) return;
     // Efeito colateral fora do updater do setProgress: sob StrictMode o updater
     // pode rodar 2x em dev, então logamos aqui para não duplicar o evento.
     // `novo_recorde` separa melhora real de rejogada; `extras` traz campos

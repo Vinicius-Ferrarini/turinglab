@@ -99,16 +99,17 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       Testes: `npx vitest run sessionSnapshot.test.js` 28/28. `npm test`
       completo: **2087/2087 passando** (26 arquivos) — sem regressão.
 
-- [ ] **2. `App.jsx`: `updateProgress(moduleId, stars, extras, logTelemetry)`**
-      TDD não aplicável da forma usual — `App.jsx` não tem suíte Vitest
-      (só Playwright, já documentado em CLAUDE.md/ADR 0011). Escrever o teste
-      MANUAL/E2E primeiro mesmo assim (roteiro no item 7) antes de
-      implementar, no espírito do TDD ainda que sem arquivo `.test.js`.
-      - 4º parâmetro opcional, default `true` (nenhum call-site existente
-        muda de comportamento).
-      - Quando `false`: pula o `logEvent({tipo_evento:'fim_fase', ...})`,
-        mas continua atualizando `progress`/`localStorage` normalmente
-        (inclusive a regra de nunca regredir).
+- [x] **2. `App.jsx`: `updateProgress(moduleId, stars, extras, logTelemetry)`** ✅
+      Sem teste unitário (App.jsx não tem suíte Vitest, só Playwright — já
+      documentado em CLAUDE.md/ADR 0011); cobertura via E2E no item 7 (CA3).
+      4º parâmetro opcional, default `true` — nenhum call-site existente
+      muda de comportamento (todos os ~12 call-sites atuais continuam
+      chamando com 2-3 argumentos, herdando o default). Quando `false`: pula
+      o `logEvent({tipo_evento:'fim_fase', ...})`, mas continua atualizando
+      `progress`/`localStorage` normalmente, inclusive a regra de nunca
+      regredir (`if (stars <= cur) return prev;` já existia e não mudou).
+      Testes: `npx eslint src/App.jsx` limpo. `npm test`: 2087/2087 (sem
+      mudança nesta etapa — item sem lógica pura nova).
 
 - [ ] **3. Export/Import nos 4 orquestradores: ligar `stars`**
       - `handleExportSession`: ler `progress?.[<chave-de-estrelas-do-módulo>]?.stars ?? 0`
