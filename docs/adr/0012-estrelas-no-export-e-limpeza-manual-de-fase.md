@@ -1,6 +1,6 @@
 # 0012 — Estrelas no exportar/importar + limpeza de sessão vira ação manual
 
-**Status:** proposta
+**Status:** aceita
 
 ## Contexto
 

@@ -224,8 +224,46 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       todos os 74 já existentes, incluindo os 4 reescritos no item 6, zero
       regressão). `npm test`: 2087/2087.
 
-- [ ] **8. Fechamento** — atualizar a seção "Session persistence &
-      export/import" do `CLAUDE.md` (campo `stars` no envelope, limpeza
-      manual em vez de automática, `updateProgress(..., logTelemetry)`).
-      Rodar `npm run lint`, `npm test`, `npm run build`, `npx playwright test`
-      completos e registrar os números finais aqui.
+- [x] **8. Fechamento** ✅
+      `CLAUDE.md` — seção "Session persistence & export/import (.json)"
+      reescrita: campo `stars` opcional (só no export, namespace de chave
+      diferente do `moduleKey` da sessão), limpeza manual em vez de
+      automática (`EndScreen` → "🎮 Acessar Tabuleiro" persiste a dispensa,
+      "🗑 Limpar Fase" é a única limpeza de verdade), `updateProgress(...,
+      logTelemetry)`, e — correção de uma imprecisão da Fase B —
+      `applyRestoredPayload` só é chamado de dentro de `loadLevel` no AFD;
+      AP/MT-Recon/MT-Trans mantêm reset inline e usam a função só pro
+      import (a Fase A tinha documentado isso errado). ADR 0012 marcada
+      "aceita" (estava "proposta"), índice do `docs/adr/README.md`
+      atualizado.
+
+## Validação final
+
+- [x] `npm run lint` — **0 erros, 36 warnings** (idêntico ao fechamento da
+      Fase A/B — nenhum warning novo introduzido por esta rodada)
+- [x] `npm test` — **2087/2087 passando** (26 arquivos — 2076 no fechamento
+      da Fase A/B + 11 novos desta rodada: 21 em `sessionSnapshot.test.js`
+      (Suites 6-7, campo `stars`))
+- [x] `npm run build` — limpo. Chunk principal **549.49 KB raw / 162.43 KB
+      gzip** — praticamente idêntico ao fechamento anterior (549.48 KB,
+      +0.01 KB), sem regressão de bundle.
+- [x] `npx playwright test` — **78/78 passando** (14 arquivos de spec: os
+      10 originais + os 4 da Fase A/B, com 4 testes reescritos pra provar o
+      novo contrato de limpeza manual — mais 1 arquivo novo desta rodada
+      com 4 testes)
+
+## Resultado final
+
+| Item | Situação |
+|---|---|
+| Estrelas no export/import (CA1-CA4) | ✅ completo, com teste unitário (schema) + E2E |
+| Limpeza manual + confirmação (CA5-CA7) | ✅ completo, EndScreen + GameHeader nos 4 módulos |
+| ADR 0012 | ✅ aceita, indexada |
+| `CLAUDE.md` atualizado | ✅ seção reescrita, 1 imprecisão da Fase B corrigida de passagem |
+| Regressão em teste pré-existente | ✅ nenhuma — os 4 testes que precisaram mudar mudaram porque o comportamento ANTIGO foi deliberadamente revogado (ADR 0012), não por acidente |
+| Bugs reais encontrados e corrigidos durante a implementação | 2 — closure stale ao limpar localStorage de dentro de `loadLevel` (item 4); `setShowVictoryScreen(false)` escondido no `onMenu` que violaria o CA5 se não fosse removido junto do `clearSession()` (item 6) — nenhum dos dois estava nos casos de aceite originais, achados só ao implementar/testar |
+| Escopo fora do combinado | nenhum — "🗑 Limpar Fase" não foi duplicado na `EndScreen` (decisão explícita do usuário), CA3 não ganhou infraestrutura de mock de rede só pra si (desproporcional, registrado) |
+
+Itens 0-8 implementados, testados e documentados nesta ordem, com TDD onde
+havia lógica pura nova e checkpoint de revisão do usuário no meio do
+planejamento (2 rodadas de esclarecimento antes de qualquer código).

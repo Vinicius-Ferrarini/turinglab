@@ -157,38 +157,67 @@ for the separate, much heavier, per-fase session state.
 
 ### Session persistence & export/import (.json)
 
-Separate, parallel mechanism from the stars above (never touches `turinglab_progress`/
-`turinglab_progress_p2`) — see ADR 0011. While a student is inside one of the 4 canvas-drawing
-modules (AFD Parte 1, Autômatos com Pilha, MT Reconhecedora, MT Transdutora), the **full working
-state** of the current exercise (drawn graph — even structurally invalid/incomplete — tested words,
-"descubra a menor palavra" progress, and the Descrição Formal form, field by field) autosaves
-debounced (~500ms) to `localStorage['turinglab_session_v1:<moduleKey>:<levelId>']`, and can also be
-exported/imported as a `.json` file via the "⬇ Exportar"/"⬆ Importar" buttons in `GameHeader.jsx`.
+Separate, parallel mechanism from the stars above (never touches the *shape* of `turinglab_progress`/
+`turinglab_progress_p2`) — see ADR 0011 and ADR 0012 (0012 revises part of 0011's original decision,
+see below). While a student is inside one of the 4 canvas-drawing modules (AFD Parte 1, Autômatos com
+Pilha, MT Reconhecedora, MT Transdutora), the **full working state** of the current exercise (drawn
+graph — even structurally invalid/incomplete — tested words, "descubra a menor palavra" progress, and
+the Descrição Formal form, field by field) autosaves debounced (~500ms) to
+`localStorage['turinglab_session_v1:<moduleKey>:<levelId>']`, and can also be exported/imported as a
+`.json` file via the "⬇ Exportar"/"⬆ Importar" buttons in `GameHeader.jsx` — plus "⬇ Exportar" again
+(same handler) and "🎮 Acessar Tabuleiro" on `EndScreen.jsx` (see "cleared only manually" below).
 
 - `src/modules/shared/persistence/sessionSnapshot.js` — pure envelope builder/validator
   (`buildSnapshot`/`isValidSnapshot`; schema version, moduleKey/levelId match, an allowlist of
   payload fields per module) shared by **both** the localStorage autosave and the file export/import
-  — one schema, not two parallel formats.
+  — one schema, not two parallel formats. `buildSnapshot` takes an optional `stars` (0-3, ADR 0012) —
+  filled in **only when exporting** (read from `turinglab_progress`/`_p2`, a different key namespace
+  than the session's own `moduleKey`+`levelId` — e.g. AFD's progress key is the raw level id, while
+  its session `moduleKey` is `'afd-p1'`; don't conflate the two). The autosave path never sets it —
+  stars already survive F5 on their own. Its absence is valid (a file exported before ADR 0012 still
+  imports fine); `SCHEMA_VERSION` did not bump for this addition, since it's purely additive.
 - `src/modules/shared/persistence/storageAdapter.js` — `localStorage` get/set/remove that never
   throws (quota exceeded, private mode, disabled storage).
 - `src/modules/shared/persistence/useLevelSessionPersistence.js` — the autosave hook (a single
-  debounced write effect) plus `readLevelSession`/`clearLevelSession`, plain functions (not hooks)
-  called imperatively inside each orchestrator's `loadLevel`, right after the pre-existing reset-to-
-  blank (synchronously for AFD/AP; after the `await` for the two MT modules, whose `loadLevel` is
-  async because of the dynamic level `import()` — see "Level data" above).
+  debounced write effect, and a `clearSession()` that also cancels any pending debounced write) plus
+  `readLevelSession`/`clearLevelSession`, plain functions (not hooks) called imperatively inside each
+  orchestrator's `loadLevel`, right after the pre-existing reset-to-blank (synchronously for AFD/AP;
+  after the `await` for the two MT modules, whose `loadLevel` is async because of the dynamic level
+  `import()` — see "Level data" above).
 - `src/modules/shared/persistence/exportImportFile.js` — the file-specific glue (`Blob`/
   `URL.createObjectURL`/`<a download>`/`FileReader`) plus the size (5MB) and depth/array-size sanity
   checks applied to any imported file. Imported files are untrusted user input: only `JSON.parse`
   (never `eval`/`new Function`), size rejected before any read, and a failed check never applies
   anything partially.
-- Each of the 4 orchestrators exposes an `applyRestoredPayload(restored)` that both the autosave
-  hydration path and the "⬆ Importar" handler call — one function, not two divergent code paths for
-  "how do I put a saved snapshot back into state."
+- Each of the 4 orchestrators exposes an `applyRestoredPayload(restored)`, used by the "⬆ Importar"
+  handler in all 4. Only **AFD's** `loadLevel` also calls it for its own hydration path — AP/MT-Recon/
+  MT-Trans keep their own inline restore logic inside `loadLevel` (pre-existing, already covered by
+  E2E; not worth refactoring just for this) and use `applyRestoredPayload` exclusively for import.
+  Don't assume all 4 share that exact code path — verify by reading before touching hydration logic.
+- Each orchestrator also exposes `resetToBlankState()` — the "back to a blank phase" half of what
+  `loadLevel` already did, factored out so "🗑 Limpar Fase" can reuse it without duplicating the
+  `setState` list. It deliberately does **not** read `currentLevel`/`level` from closure (or touch
+  `localStorage`) — `loadLevel` calls it *before* `setCurrentLevel(level)` has committed, so doing
+  either there would act on the *previous* level, not the one being loaded.
 - `uid`s on nodes are never part of the persisted payload — they're regenerated on every hydration,
   exactly like when the student adds a brand-new node.
-- The session for a level is cleared only when the student reaches that level's `EndScreen`
-  (victory, or the AFD-L14 "impossible" screen) and clicks "Voltar ao Menu"/"Próxima" — never by
-  timeout or by size; an F5 or a trip back to the module's menu and back keeps it.
+- **Cleared only manually (ADR 0012 — this replaced ADR 0011's original auto-clear-on-exit trigger).**
+  Reaching a level's `EndScreen` (victory, or the AFD-L14 "impossible" screen) and clicking "Voltar ao
+  Menu"/"Próxima" no longer clears anything — the session persists indefinitely until the student
+  explicitly clicks "🗑 Limpar Fase" (`GameHeader`, with a Sim/Não confirmation balloon — portaled to
+  `document.body`, since a same-stacking-context popover would end up behind any full-screen overlay
+  painted later in the DOM, e.g. the "descubra a menor palavra" `.locked-overlay`) and confirms. This
+  means reopening an already-won level **reopens its `EndScreen` too** (same persistence as an F5
+  mid-victory already had) — `EndScreen`'s new "🎮 Acessar Tabuleiro" button dismisses that overlay
+  without navigating away or clearing anything, and — because that dismissal is itself part of the
+  autosaved payload (`showVictoryScreen`/`showImpossibleScreen`) — doing so once means future re-opens
+  of that level go straight to the board instead. Only clicking "Voltar ao Menu"/"Próxima" *without*
+  first dismissing via "Acessar Tabuleiro" keeps the flag on, so the `EndScreen` reappears next time.
+- `App.jsx`'s `updateProgress(moduleId, stars, extras, logTelemetry = true)` — the 4th param, passed
+  `false` only when restoring stars from an imported file, skips the `logEvent({tipo_evento:'fim_fase'
+  , ...})` call (still updates `progress`/`localStorage`, still never regresses). Importing a backup
+  isn't the student finishing the phase right now; logging it as `fim_fase` would skew the IC research
+  telemetry. No call site besides the import handlers passes `false`.
 
 ### AFD / AP / MT: same idea, genuinely different UX — don't assume parity
 
