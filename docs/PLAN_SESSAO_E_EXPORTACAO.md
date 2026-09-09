@@ -153,7 +153,45 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       tamanho real atual do projeto; `OPTIMIZATION_PROGRESS.md` está
       desatualizado desde então). Novo chunk lazy
       `useLevelSessionPersistence-*.js` (~8 KB) não entra no chunk principal.
-- [ ] **6. E2E Playwright (Feature A)** — 4 specs, um por módulo
+- [x] **6. E2E Playwright (Feature A)** — 4 specs, um por módulo ✅
+      `e2e/session_persistence_afd1.spec.js` (6),
+      `e2e/session_persistence_ap.spec.js` (6),
+      `e2e/session_persistence_mt_recon.spec.js` (6),
+      `e2e/session_persistence_mt_trans.spec.js` (5) — 23 testes novos, cada
+      spec cobrindo: grafo parcial/estruturalmente incompleto sobrevive a
+      `page.reload()`; histórico de palavras testadas sobrevive (MT-Trans:
+      as DUAS abas Linguagem/Desenho + `activeTab` restaurada); "descubra a
+      menor palavra" continua destravado (AFD/AP/MT-Recon — MT-Trans não
+      tem essa mecânica, ver CLAUDE.md); Descrição Formal parcialmente
+      preenchida sobrevive; sair pro Menu e reabrir a MESMA fase sem
+      `page.reload()`; vencer a fase + "Voltar ao Menu" limpa a sessão
+      (reabre em branco).
+      **3 achados reais de bugs/armadilhas ao depurar** (não do código de
+      produção — dos próprios specs, mas documentados porque quase levaram
+      a falsos negativos):
+      1. Clicar de novo no card "↗ Criar Seta" enquanto o modo CONNECTING já
+         está ativo **desliga** o modo (toggle) nos 3 módulos com deck de
+         cartas (AFD/AP/MT) — criar múltiplas transições em sequência exige
+         clicar o card só 1×.
+      2. `TripleEditor`/`TMTransitionEditor` auto-focam o campo "read" ~20ms
+         após montar; preencher os outros campos antes disso é uma corrida
+         real (valor digitado podia ser sobrescrito) — resolvido com um
+         `waitForTimeout(50)` após abrir o editor.
+      3. Grafos com muitas transições (MT-Recon L1: 14 triplas/6 estados)
+         fazem os chips de tripla (posicionados sobre a aresta/nó) cobrirem
+         o próprio nó — clicar no centro do nó acerta o chip por engano.
+         Resolvido clicando perto da base do nó via `boundingBox()` real
+         (não um offset fixo, que quebra com zoom) em vez do centro.
+      Também corrigido durante a escrita: campo de estado final com 1 só
+      elemento não pode ter `{ }` (mesma regra de brace-format do AFD/AP,
+      só percebida ao montar o MT-Recon/MT-Trans "vencer"). MT-Trans usa
+      L2 (3 estados/6 transições) pro teste de vitória em vez do 1º nível
+      (L1, 6 estados/14 transições) — mais rápido de montar via UI sem
+      perder cobertura; demais testes do módulo usam o 1º nível, como os
+      outros 3 specs.
+      Testes: `npx playwright test` — **71/71 passando** (14 arquivos de
+      spec — os 4 novos com 23 testes + os 10 já existentes com 48, zero
+      regressão). `npm test`: 2055/2055 (sem mudança nesta etapa, só E2E).
 - [ ] **7. `exportImportFile.js`** + testes unitários (serialização/validação)
 - [ ] **8. UI de exportar/importar** — botão no `GameHeader.jsx`
 - [ ] **9. E2E Playwright (Feature B)** — `e2e/export_import_json.spec.js`
