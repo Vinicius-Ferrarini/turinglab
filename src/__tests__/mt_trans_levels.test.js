@@ -89,6 +89,64 @@ const KNOWN_PENDING_UNDEMONSTRATED = new Set([
   'L10|q15|q15|B|B|L',
 ]);
 
+function pickSabotageSymbol(original, tapeAlphabet) {
+  const pool = (tapeAlphabet ?? []).filter(s => s !== original && s !== '');
+  return pool[0] ?? (original === 'X' ? 'Y' : 'X');
+}
+
+// ─── Regressão: nenhuma célula de write é trocável sem que a validação note ──
+// Mutation testing: troca só o WRITE de uma transição por vez (mantém
+// read/move/from/to — controle da MT intacto) e roda fuzzTMTransducer de
+// novo. Se ainda passar (ok:true), aquela célula pode estar errada sem que
+// "✓ Validar MT" jamais avise — a classe de bug corrigida em §3.2.
+//
+// RATCHET, não allowlist de "confirmado inalcançável": diferente de
+// KNOWN_DEAD_TRANSITIONS/KNOWN_PENDING_UNDEMONSTRATED acima (que enumeram
+// transições específicas já investigadas), aqui os números abaixo são uma
+// FOTOGRAFIA HONESTA do estado atual, tirada logo após ligar a checagem de
+// saída (docs/PLAN_BATERIA_VALIDACAO_MT.md §3.2/§4): 7 dos 21 níveis já
+// ficam 100% blindados (todo write é detectável); os outros 14 — sobretudo
+// as MTs de tabela de multiplicação/carry (L16-L23) e a cifra de
+// substituição (L11) — ainda têm células cujo valor errado não muda a saída
+// das palavras testadas hoje (ex.: combinação de dígito+carry que não
+// aparece em nenhum testWord atual). Fechar isso de vez exige expandir
+// testWords por nível (trabalho de conteúdo, não só código) — rastreado
+// como item em aberto, não escondido: o teto abaixo BLOQUEIA regressão (não
+// pode aumentar) mas não finge que já está tudo coberto. Ao adicionar
+// testWords que fechem gaps de um nível, DIMINUA o número correspondente.
+const KNOWN_WRITE_GAP_CEILING = {
+  L06: 8, L10: 4, L11: 90, L12: 22, L14: 36, L16: 17, L17: 27, L18: 38,
+  L19: 48, L20: 59, L21: 70, L22: 81, L23: 91, L24: 1,
+};
+
+describe('MT Transdutora — nenhuma célula de write é trocável sem que a validação note (além do teto conhecido)', () => {
+  for (const level of MT_LEVELS) {
+    it(`${level.label}: write(s) trocável(is) sem detecção não passa do teto conhecido`, () => {
+      const graph = lastGraphStep(level).stateUpdate;
+      const transitions = graph.transitions;
+      const undetected = [];
+      for (let i = 0; i < transitions.length; i++) {
+        const t = transitions[i];
+        if (t.write === '') continue; // preservar branco é quase sempre estrutural
+        const sabotagedWrite = pickSabotageSymbol(t.write, level.tapeAlphabet);
+        const mutated = { states: graph.nodes, transitions: transitions.map((tt, idx) => idx === i ? { ...tt, write: sabotagedWrite } : tt) };
+        const res = fuzzTMTransducer(mutated, level);
+        if (res.ok) undetected.push(t);
+      }
+      const ceiling = KNOWN_WRITE_GAP_CEILING[level.label] ?? 0;
+      expect(
+        undetected.length,
+        undetected.length > ceiling
+          ? `${level.label}: ${undetected.length} write(s) trocável(is) sem a validação notar (teto conhecido: ` +
+            `${ceiling}) — NOVA regressão: ` +
+            undetected.map(t => `${t.from}->${t.to} (${t.read || '□'};${t.write || '□'},${t.move})`).join(', ') +
+            `. Adicione um testWord que force a(s) célula(s) nova(s) a aparecer na saída final.`
+          : undefined
+      ).toBeLessThanOrEqual(ceiling);
+    });
+  }
+});
+
 describe('MT Transdutora — sanidade básica de cada nível', () => {
   for (const level of MT_LEVELS) {
     it(`${level.label}: tem estado inicial, ao menos um final, e alfabeto`, () => {
@@ -131,6 +189,42 @@ describe('MT Transdutora — gabarito produz a SAÍDA esperada (validate) para c
       }
     });
   }
+});
+
+// ─── Regressão: aceitar em estado final não basta, a fita tem que bater ────
+// Hoje (antes do fix), fuzzTMTransducer só checa se a MT chega num estado
+// final — NUNCA compara o conteúdo escrito com level.validate(word). Ver
+// docs/PLAN_BATERIA_VALIDACAO_MT.md §3.2. Fixture mínima: MT de 2 estados que
+// aceita "a" mas escreve um símbolo fixo ERRADO (nunca relido por nenhuma
+// transição, pra isolar exatamente esse buraco, sem depender de nenhum nível
+// real).
+const WRONG_OUTPUT_FIXTURE_LEVEL = {
+  alphabet: ['a'],
+  testWords: ['a'],
+  validate: (w) => (w === 'a' ? 'X' : null),
+};
+function wrongOutputGraph(write) {
+  return {
+    states: [
+      { id: 'q0', isInitial: true, isFinal: false },
+      { id: 'q1', isInitial: false, isFinal: true },
+    ],
+    transitions: [
+      { from: 'q0', to: 'q1', read: 'a', write, move: 'R' },
+    ],
+  };
+}
+
+describe('MT Transdutora — aceitar em estado final não basta, a fita tem que bater', () => {
+  it('MT que aceita mas escreve símbolo errado numa célula não afetada pelo controle deve falhar na validação', () => {
+    const res = fuzzTMTransducer(wrongOutputGraph('Z'), WRONG_OUTPUT_FIXTURE_LEVEL);
+    expect(res.ok, `esperado ok:false (escreveu "Z", validate() espera "X") — obteve ${JSON.stringify(res)}`).toBe(false);
+  });
+
+  it('MT com fita correta continua passando (sem falso-positivo do endurecimento)', () => {
+    const res = fuzzTMTransducer(wrongOutputGraph('X'), WRONG_OUTPUT_FIXTURE_LEVEL);
+    expect(res.ok, `esperado ok:true (escreveu "X", igual a validate()) — obteve ${JSON.stringify(res)}`).toBe(true);
+  });
 });
 
 describe('MT Transdutora — checkpoints por passo (aula guiada reflete o grafo parcial)', () => {

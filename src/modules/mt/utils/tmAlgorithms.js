@@ -71,20 +71,26 @@ export function simulateTM(graph, inputWord, maxSteps = 2000, startMarker = null
 }
 
 // ── Validador de MT Transdutora ───────────────────────────────────────────────
-// Recebe a MT do aluno e o objeto de nível.
-// Para cada testWord, compara a fita resultante (sem □ das bordas) com level.validate(word).
+// Recebe a MT do aluno e o objeto de nível. Pra cada testWord: (1) a MT tem
+// que terminar em estado final, E (2) a fita final (sem □ de borda/marcador)
+// tem que bater com level.validate(word) — as duas condições, não só a
+// primeira (ver docs/PLAN_BATERIA_VALIDACAO_MT.md §3.2: antes desta função só
+// checava (1), então uma MT que aceitava certo mas escrevia qualquer coisa
+// passava "✓ Validar MT" sem nenhum aviso).
 export function fuzzTMTransducer(graph, level) {
   // Remove a palavra vazia da bateria quando o nível pede (skipEmptyWord)
   let words = level.testWords ?? [];
   if (level.skipEmptyWord) words = words.filter(w => w !== '');
 
-  // Aceitação por LINGUAGEM: a palavra é válida se a MT termina em um estado
-  // final (isFinal), independentemente do conteúdo escrito na fita — coerente
-  // com a natureza transdutora (a transformação é verificada na aba Transdução).
   for (const word of words) {
-    const { status } = simulateTM(graph, word, 2000, level.startMarker ?? null);
+    const { status, tape } = simulateTM(graph, word, 2000, level.startMarker ?? null);
     if (status === 'LOOP')     return { ok: false, counterexample: word, reason: 'loop' };
     if (status !== 'ACCEPTED') return { ok: false, counterexample: word, reason: 'rejected' };
+    const expected = level.validate?.(word);
+    const got = extractTapeOutput(tape, level.startMarker ?? level.outputMarker ?? null);
+    if (expected != null && got !== expected) {
+      return { ok: false, counterexample: word, reason: 'wrong-output', expected, got };
+    }
   }
   return { ok: true };
 }

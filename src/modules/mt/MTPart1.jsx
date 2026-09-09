@@ -500,7 +500,7 @@ export default function MTPart1({ onBack, progress, updateProgress,
         ? `Loop detectado para "${show}". Verifique se a MT para em todos os casos.`
         : res.reason === 'rejected'
         ? `Sua MT não aceita "${show}" (parou em estado não-final).`
-        : `Para "${show}": esperado "${res.expected}", obteve "${res.got}".`;
+        : `Para "${show}": sua MT escreveu "${res.got}" na fita, mas o esperado era "${res.expected}".`;
       // Erro fica só no balão vermelho do painel lateral (result.*) — o
       // Maurílio não comenta erros, só sucesso/dicas.
       showToast?.(msg, 'error');
