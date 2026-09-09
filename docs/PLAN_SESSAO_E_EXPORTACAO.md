@@ -16,7 +16,21 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       necessidade de interoperar com JFLAP). Linha adicionada ao índice de
       `docs/adr/README.md`.
       Testes: N/A (documentação).
-- [ ] **1. `sessionSnapshot.js` + testes primeiro**
+- [x] **1. `sessionSnapshot.js` + testes primeiro** ✅
+      `src/__tests__/sessionSnapshot.test.js` escrito ANTES da implementação (17
+      testes: roundtrip stringify/parse para os 4 moduleKey, grafo AFD
+      não-determinístico/sem flags/transição em branco sobrevive intacto,
+      schemaVersion incompatível e envelope malformado (`null`/string/objeto
+      solto) rejeitados sem lançar, payload vazando campo de outro módulo
+      (`linguagemTests` fora de mt-trans, `testMode` em mt-trans,
+      `isDrawingUnlocked`/`hintStage` em mt-trans) rejeitado, fixture MT grande
+      (40 estados, 120 transições, 150+130 entradas nos 2 históricos) sem
+      truncar nenhum item. Confirmado falhando (módulo inexistente) antes de
+      implementar `src/modules/shared/persistence/sessionSnapshot.js`
+      (`buildSnapshot`/`isValidSnapshot`/`SCHEMA_VERSION`, allowlist de campos
+      por `moduleKey` — fail closed em campo desconhecido).
+      Testes: `npx vitest run sessionSnapshot.test.js` 17/17. `npm test`
+      completo: **2016/2016 passando** (22 arquivos) — sem regressão.
 - [ ] **2. `storageAdapter.js` + testes** (storage falso injetado)
 - [ ] **3. `useTMGraph.js`/`usePDAGraph.js`: `reset(initial)`** — teste primeiro
 - [ ] **4. Içar Descrição Formal (AFD e AP)** — componentes controlados
