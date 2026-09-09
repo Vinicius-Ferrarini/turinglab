@@ -191,11 +191,38 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       passando** (os 4 testes reescritos + todos os 70 restantes, incluindo
       os 26 de export/import/persistência já existentes).
 
-- [ ] **7. E2E Playwright** — específico pra este conjunto de mudanças,
-      arquivo novo (ex. `e2e/stars_export_and_clear_session.spec.js`),
-      cobrindo os 7 casos de aceite acima nos 4 módulos (ou pelo menos AFD
-      completo + 1 caso representativo nos outros 3, a decidir pelo volume —
-      registrar a escolha no doc de progresso).
+- [x] **7. E2E Playwright** ✅
+      `e2e/stars_export_and_clear_session.spec.js` (4 testes novos, só AFD —
+      decisão registrada: CA1/CA2/CA4/CA6 são lógica de `sessionSnapshot.js`/
+      `App.jsx` genérica, já coberta por unit test onde possível (item 1) e
+      idêntica nos 4 módulos por construção (mesmo `buildSnapshot`/
+      `updateProgress`); não valia repetir a mesma prova 4× em E2E, que é
+      caro. CA5/CA7 já saíram cobertos nos 4 módulos ao reescrever os testes
+      "vencer a fase" existentes (item 6) — esses SIM precisavam ser por
+      módulo, porque testam a integração `EndScreen`+orquestrador
+      específica de cada um.
+      - CA1: exporta com 1 estrela, confere `content.stars === 1` no arquivo.
+      - CA2: exporta (stars:1); importa uma cópia editada com stars:3 → sobe
+        pra 3; importa outra cópia com stars:0 → **continua em 3** (nunca
+        regride).
+      - CA4: exporta, remove a chave `stars` do JSON (simulando um arquivo
+        da Feature B original, pré-ADR 0012), reimporta → sucesso, sem
+        erro, estrelas inalteradas.
+      - CA6: ganha 1 estrela + desenha 1 nó → "Limpar Fase" → "Não" não
+        muda nada → "Sim" apaga o grafo (`locked-overlay` volta) mas a
+        estrela conquistada continua em `turinglab_progress`.
+      **CA3 sem cobertura E2E** (registrado explicitamente, não é omissão
+      silenciosa): não existe infraestrutura de mock de rede pro Firebase
+      neste repo — as chamadas reais já falham no ambiente de teste
+      (`FirebaseError: auth/network-request-failed`, visível nos logs do
+      webServer desde a Fase A), então não dá pra interceptar/contar
+      eventos de telemetria via E2E sem construir essa infraestrutura do
+      zero, desproporcional pra 1 caso. Coberto por revisão de código: o
+      guard `if (!logTelemetry) return;` em `App.jsx` (item 2) é trivial de
+      auditar visualmente.
+      Testes: `npx playwright test` — **78/78 passando** (4 novos +
+      todos os 74 já existentes, incluindo os 4 reescritos no item 6, zero
+      regressão). `npm test`: 2087/2087.
 
 - [ ] **8. Fechamento** — atualizar a seção "Session persistence &
       export/import" do `CLAUDE.md` (campo `stars` no envelope, limpeza
