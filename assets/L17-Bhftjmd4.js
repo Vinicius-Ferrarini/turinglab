@@ -1,0 +1,1 @@
+import{t as e}from"./_decimalMult-DtTLfvIz.js";var t=e(3,`MT_L17`,`L17`);export{t as default};
