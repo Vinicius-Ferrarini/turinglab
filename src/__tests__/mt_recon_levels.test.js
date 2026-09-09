@@ -80,6 +80,18 @@ const KNOWN_DEAD_TRANSITIONS = new Set([
 // docs/PLAN_BATERIA_VALIDACAO_MT.md §2/§3.1. Chave:
 // `${label}|${from}|${to}|${read}|${write}|${move}`.
 const KNOWN_BATTERY_COVERAGE_GAPS = new Set([
+  // L09 p1->p3 (□;□,L): fase de pré-validação de formato (a*b*c*). Só é
+  // alcançada por uma palavra a*b+ sem nenhum "c" (i≥0, j≥1, k=0) — e pela
+  // linguagem (k=i+j) essa forma NUNCA é aceita (k=0 < i+j já que j≥1). Ou
+  // seja: COM a transição, a palavra segue até p3→q1 e é rejeitada lá; SEM
+  // ela, a MT trava em p1 e já é rejeitada ali — mesmo veredito nos dois
+  // casos, pra QUALQUER palavra possível (não só as testadas), verificado
+  // computacionalmente (b, ab, aab, abb, aaabbb — REJECTED nos dois grafos).
+  // Diferente de KNOWN_DEAD_TRANSITIONS (que é sobre inalcançável na
+  // EXECUÇÃO): esta transição é alcançável, só não é NUNCA discriminante
+  // pra bateria, por construção da linguagem — nenhuma palavra jamais vai
+  // fechar esse "gap".
+  'L09|p1|p3|||L',
 ]);
 
 // ─── Regressão do bug relatado: MT_RECON L06 sem q5→q5 (b/B) passava "✓ Validar MT" ──
