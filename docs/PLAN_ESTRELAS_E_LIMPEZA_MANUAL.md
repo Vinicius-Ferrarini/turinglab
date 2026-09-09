@@ -125,22 +125,41 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       17 warnings** — idêntico à soma dos 4 baselines individuais (13+0+2+2)
       já registrados na Fase B, nenhum novo. `npm test`: 2087/2087.
 
-- [ ] **4. `resetPhaseToBlank()` por orquestrador**
-      Extrai a lógica de "estado em branco" que hoje só existe dentro do
-      início de `loadLevel` pra uma função reaproveitável por `loadLevel` E
-      pelo novo fluxo de "Limpar Fase" — sem duplicar a lista de `setState`.
-      Chama `clearLevelSession(moduleKey, levelId)` também. Sem teste
-      unitário (mesma natureza de `applyRestoredPayload`, já sem teste
-      próprio na Fase A) — cobertura via Playwright no item 7.
-
-- [ ] **5. Componente de confirmação + botão "🗑 Limpar Fase" no `GameHeader`**
-      Balão de confirmação reaproveitando o estilo visual já usado no jogo
-      (balão do Maurílio) — decisão de implementação, não de comportamento
-      visível, então não bloqueia a revisão: exato componente/CSS a decidir
-      durante a execução, documentando a escolha no doc de progresso.
-      `GameHeader` ganha `onClearSession` (abre o balão de confirmação — só
-      existe ali, **não** na `EndScreen`, ver item 6). Sim verde/Não
-      vermelho, texto exato "Isso vai apagar os dados da fase".
+- [x] **4+5. `resetToBlankState()` por orquestrador + botão "🗑 Limpar Fase"
+      com confirmação no `GameHeader`** ✅ (implementados juntos — um sem o
+      outro deixaria `handleClearSession` sem uso, quebrando `no-unused-vars`
+      no lint; não fazia sentido commitar em 2 passos)
+      **Decisão de implementação registrada** (refina o item 4 do plano
+      original): em vez de UMA função `resetPhaseToBlank()` que faz reset +
+      `clearLevelSession` junto, separei em duas — `resetToBlankState()`
+      (só estado local, sem ler `currentLevel`/`level` no corpo) e
+      `handleClearSession()` (chama `clearSession()` do
+      `useLevelSessionPersistence` — que já cancela o autosave debounced
+      pendente, não só apaga o localStorage — e então `resetToBlankState()`).
+      Motivo: se `loadLevel` chamasse uma função que lê `currentLevel` pra
+      limpar o localStorage, limparia a sessão do nível ANTERIOR (React
+      ainda não comitou `setCurrentLevel(level)` nesse ponto do callback) —
+      um bug real que só apareceu ao tentar reaproveitar ingenuamente.
+      No AFD, `loadLevel` foi refatorado pra chamar `resetToBlankState()`
+      (já reaproveitava `applyRestoredPayload`, então manter a mesma
+      filosofia). No AP/MT-Recon/MT-Trans, `loadLevel` manteve seu reset
+      inline como estava (decisão já registrada na Fase A/B — código
+      testado, não valia reabrir); `resetToBlankState()` ali é usado só
+      pelo "Limpar Fase".
+      `GameHeader` ganha `onClearSession` — balão de confirmação **num
+      portal pro `document.body`** (achado ao testar manualmente: renderizado
+      inline, o balão ficava atrás de qualquer overlay de tela cheia com
+      z-index igual/maior que apareça depois no DOM, ex. `.locked-overlay`
+      da grade "descubra a menor palavra" — stacking context não deixa um
+      z-index local "vencer" um overlay fora da árvore do header; corrigido
+      com `createPortal` + posição calculada via `getBoundingClientRect` do
+      botão). Sim verde/Não vermelho, texto exato "Isso vai apagar os dados
+      da fase". Confirmado visualmente com Playwright antes de fechar o
+      item (screenshot manual, descartado depois).
+      Testes: `npx eslint` nos 5 arquivos tocados — **0 erros**, contagem de
+      warnings idêntica à baseline em cada arquivo (nenhum novo introduzido;
+      1 warning novo de `exhaustive-deps` no AFD foi corrigido adicionando
+      as deps faltantes, voltando aos 13 de sempre). `npm test`: 2087/2087.
 
 - [ ] **6. `EndScreen.jsx`: botões "⬇ Exportar" + "🎮 Acessar Tabuleiro"**
       Novas props `onExport` (reaproveita o MESMO handler já passado pro

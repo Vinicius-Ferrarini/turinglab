@@ -365,23 +365,15 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'afd-p1', nivel_id: currentLevel.id });
   }, [currentLevel, applyRestoredPayload, updateProgress, showToast]);
 
-  // ── Carrega fase ──────────────────────────────────────────────────────────
-  const loadLevel = useCallback((level) => {
+  // Reset "em branco" puro — sem tocar em currentLevel/tela/telemetria nem em
+  // localStorage. Reaproveitado por loadLevel (troca de fase) E por
+  // handleClearSession (Limpar Fase — ADR 0012): não lê `currentLevel` no
+  // corpo de propósito, porque loadLevel chama isto ANTES de
+  // setCurrentLevel(level) surtir efeito (currentLevel ainda seria o nível
+  // ANTERIOR nesse ponto do callback, e limpar localStorage aqui limparia a
+  // fase errada).
+  const resetToBlankState = useCallback(() => {
     _uidCounter = 0;
-    // Telemetria: marca o início da fase, zera os contadores e registra inicio_fase.
-    phaseStartRef.current = performance.now();
-    attemptsRef.current = 0;
-    tutorialOpensRef.current = 0;
-    errorSinceTutorialRef.current = false;
-    logEvent({
-      tipo_evento: 'inicio_fase',
-      modulo: 'afd-p1',
-      nivel_id: level.id,
-      dificuldade: LEVEL_DIFFICULTY[level.id] ?? null,
-    });
-    setCurrentLevel(level);
-    setCurrentPage(1);
-    setTela('JOGO');
     setNodes([]);
     setTransitions([]);
     setTestWords([]);
@@ -398,7 +390,6 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     setShowVictoryScreen(false);
     setShowImpossibleScreen(false);
     setGuidedLessonStep(null);
-    setProfessorMessage('');
     resetZoom();
     setSelectedNodes([]);
     setShowSimPanel(false);
@@ -409,12 +400,44 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     userNodesSnapshot.current = null;
     userTransitionsSnapshot.current = null;
     isTableFocusedRef.current = false;
+    setFormalSnapshot(null);
+  }, [resetHistory, resetDraw, resetZoom, wordleGame, setGuidedLessonStep, userNodesSnapshot, userTransitionsSnapshot]);
+
+  // ── "🗑 Limpar Fase" (ADR 0012) — ação manual, com confirmação na UI.
+  // Apaga a sessão salva da fase atual (nunca as estrelas) e volta o
+  // tabuleiro pro estado em branco, sem sair da tela.
+  const handleClearSession = useCallback(() => {
+    if (!currentLevel) return;
+    // clearSession() (do useLevelSessionPersistence) cancela também o
+    // autosave debounced pendente, não só apaga o localStorage — evita uma
+    // escrita tardia reviver o estado antigo por cima da limpeza.
+    clearSession();
+    resetToBlankState();
+    showToast('Fase limpa!', 'success');
+  }, [currentLevel, clearSession, resetToBlankState, showToast]);
+
+  // ── Carrega fase ──────────────────────────────────────────────────────────
+  const loadLevel = useCallback((level) => {
+    // Telemetria: marca o início da fase, zera os contadores e registra inicio_fase.
+    phaseStartRef.current = performance.now();
+    attemptsRef.current = 0;
+    tutorialOpensRef.current = 0;
+    errorSinceTutorialRef.current = false;
+    logEvent({
+      tipo_evento: 'inicio_fase',
+      modulo: 'afd-p1',
+      nivel_id: level.id,
+      dificuldade: LEVEL_DIFFICULTY[level.id] ?? null,
+    });
+    setCurrentLevel(level);
+    setCurrentPage(1);
+    setTela('JOGO');
+    resetToBlankState();
 
     // ── Hidrata sessão salva (se houver), depois do reset em branco acima ────
     const restored = readLevelSession('afd-p1', level.id);
     if (restored) applyRestoredPayload(restored, level);
-    else setFormalSnapshot(null);
-  }, [resetHistory, resetDraw, resetZoom, applyRestoredPayload]);
+  }, [resetToBlankState, applyRestoredPayload]);
 
   // ── Modo forçado (ex.: Boss/Trabalho): pula o menu interno e entra direto
   // no nível indicado. Só roda uma vez ao montar — o componente é remontado
@@ -789,6 +812,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
         onSizeHint={WORDLE_GRID_LEVEL_IDS.has(currentLevel?.id) ? handleWordleHint : handleSizeHint}
         onExportSession={handleExportSession}
         onImportSessionFile={handleImportSessionFile}
+        onClearSession={handleClearSession}
       />
 
       <div className="workspace">

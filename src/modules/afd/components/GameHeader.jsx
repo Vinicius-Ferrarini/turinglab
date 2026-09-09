@@ -6,7 +6,8 @@
 //
 // Props exclusivas do AFD (`toggleSidebar`) e do AP (`secondaryAction`) são
 // opcionais — omitidas, o header se comporta exatamente como antes.
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './GameHeader.css';
 import { SvgStars } from '../SvgStar';
 import { navBtnStyle, navBtnDisabledStyle } from './navButtonStyles';
@@ -35,8 +36,29 @@ export default function GameHeader({
   // orquestradores-alvo passam sempre os dois juntos. onImportSessionFile
   // recebe o File escolhido no <input type="file"> oculto.
   onExportSession, onImportSessionFile,
+  // "🗑 Limpar Fase" (ADR 0012): apaga o estado salvo da fase (nunca as
+  // estrelas), com confirmação num balão (Sim verde/Não vermelho). Mostrado
+  // só quando o módulo passa onClearSession — os 4 orquestradores-alvo
+  // sempre passam.
+  onClearSession,
 }) {
   const importFileInputRef = useRef(null);
+  const clearBtnRef = useRef(null);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [confirmClearPos, setConfirmClearPos] = useState(null);
+  // O balão precisa ir num portal pro <body> — renderizado dentro do header
+  // (z-index:10), qualquer overlay de tela cheia com z-index igual ou maior
+  // que apareça DEPOIS no DOM (ex.: .locked-overlay da grade "descubra a
+  // menor palavra") cobriria o balão e bloquearia o clique em Sim/Não,
+  // mesmo com um z-index local mais alto — stacking context não escapa do
+  // header sem portal. Posição calculada a partir do botão (getBoundingClientRect).
+  const toggleConfirmClear = () => {
+    if (!confirmClearOpen) {
+      const rect = clearBtnRef.current?.getBoundingClientRect();
+      if (rect) setConfirmClearPos({ top: rect.bottom + 8, left: rect.right - 220 });
+    }
+    setConfirmClearOpen(o => !o);
+  };
   const objectiveText = objective ?? currentLevel?.formula ?? '';
   const levelLabel = label ?? currentLevel?.label;
   const diffBg = diffColor ?? '#fff';
@@ -142,7 +164,54 @@ export default function GameHeader({
             />
           </>
         )}
+        {onClearSession && (
+          <button
+            ref={clearBtnRef}
+            className="menu-btn"
+            style={{ padding: '4px 12px', fontSize: 12, marginLeft: 6 }}
+            onClick={toggleConfirmClear}
+            title="Apagar o estado salvo desta fase (mantém as estrelas)"
+          >
+            🗑 Limpar Fase
+          </button>
+        )}
       </div>
+      {onClearSession && confirmClearOpen && confirmClearPos && createPortal(
+        <div style={{
+          position: 'fixed', top: confirmClearPos.top, left: confirmClearPos.left, zIndex: 99999,
+          width: 220, padding: '12px 14px',
+          background: '#fff9c4', border: '3px solid #000', borderRadius: 12,
+          boxShadow: '4px 4px 0 #000',
+          fontFamily: 'var(--font-comic)',
+        }}>
+          <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#000', lineHeight: 1.3 }}>
+            Isso vai apagar os dados da fase
+          </p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setConfirmClearOpen(false)}
+              style={{
+                padding: '5px 14px', fontSize: 12, fontWeight: 900,
+                background: 'var(--accent-red)', border: '2px solid #000', borderRadius: 7,
+                boxShadow: '2px 2px 0 #000', cursor: 'pointer', color: '#000',
+              }}
+            >
+              Não
+            </button>
+            <button
+              onClick={() => { setConfirmClearOpen(false); onClearSession(); }}
+              style={{
+                padding: '5px 14px', fontSize: 12, fontWeight: 900,
+                background: 'var(--accent-green)', border: '2px solid #000', borderRadius: 7,
+                boxShadow: '2px 2px 0 #000', cursor: 'pointer', color: '#000',
+              }}
+            >
+              Sim
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
       <div style={{ width: 180, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button

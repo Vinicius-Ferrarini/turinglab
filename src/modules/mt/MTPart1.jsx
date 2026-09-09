@@ -187,6 +187,38 @@ export default function MTPart1({ onBack, progress, updateProgress,
     if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'mt-trans', nivel_id: level.id });
   }, [level, applyRestoredPayload, updateProgress, showToast]);
 
+  // Reset "em branco" puro — mesmos campos que o loadLevel zera quando NÃO
+  // há sessão salva, mas sem telemetria/troca de tela (fica na mesma fase).
+  // Reaproveitado só por handleClearSession — loadLevel mantém seu próprio
+  // reset inline (decisão da Fase A: já testado, não valia reabrir).
+  const resetToBlankState = useCallback(() => {
+    g.reset();
+    setMode('IDLE'); setConnectingSource(null);
+    setSimWord('');
+    setLinguagemTests([]);
+    setDesenhoTests([]);
+    setActiveTab('linguagem');
+    setDeckGhost(null);
+    setVictory(false);
+    setSelectedNodes([]); setSelectionBox(null);
+    setFormalAnswers(EMPTY_FORMAL);
+    setFormalMode(false);
+    setFormalElementsValid(false);
+    setFieldErrors({}); setCellErrors({});
+    draw.resetDrawings();
+    resetZoom();
+  }, [g, draw, resetZoom]);
+
+  // ── "🗑 Limpar Fase" (ADR 0012) — ação manual, com confirmação na UI.
+  const handleClearSession = useCallback(() => {
+    if (!level) return;
+    // clearSession() (do useLevelSessionPersistence) cancela também o
+    // autosave debounced pendente, não só apaga o localStorage.
+    clearSession();
+    resetToBlankState();
+    showToast?.('Fase limpa!', 'success');
+  }, [level, clearSession, resetToBlankState, showToast]);
+
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
   const applyStep = useCallback((st) => {
     if (!st) return;
@@ -686,6 +718,7 @@ export default function MTPart1({ onBack, progress, updateProgress,
         onCloseLesson={finishLesson}
         onExportSession={handleExportSession}
         onImportSessionFile={handleImportSessionFile}
+        onClearSession={handleClearSession}
       />
 
       <div className="workspace">

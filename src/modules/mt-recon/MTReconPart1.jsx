@@ -235,6 +235,41 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
     if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'mt-recon', nivel_id: level.id });
   }, [level, applyRestoredPayload, updateProgress, showToast]);
 
+  // Reset "em branco" puro — mesmos campos que o loadLevel zera quando NÃO
+  // há sessão salva, mas sem telemetria/troca de tela (fica na mesma fase).
+  // Reaproveitado só por handleClearSession — loadLevel mantém seu próprio
+  // reset inline (decisão da Fase A: já testado, não valia reabrir).
+  const resetToBlankState = useCallback(() => {
+    g.reset();
+    setSim(null); setSimHighlight({ nodeId: null, type: null, tIdx: null, seq: 0 });
+    setMode('IDLE'); setConnectingSource(null);
+    setSimWord('');
+    setDeckGhost(null);
+    setVictory(false);
+    setSelectedNodes([]); setSelectionBox(null);
+    setTestedWords([]);
+    setTestMode('LANGUAGE');
+    clearTimeout(unlockDelayRef.current);
+    wordleGame.setHintStage(0);
+    setIsDrawingUnlocked(false);
+    setFormalAnswers(EMPTY_FORMAL);
+    setFormalMode(false);
+    setFormalElementsValid(false);
+    setFieldErrors({}); setCellErrors({});
+    draw.resetDrawings();
+    resetZoom();
+  }, [g, draw, resetZoom, wordleGame]);
+
+  // ── "🗑 Limpar Fase" (ADR 0012) — ação manual, com confirmação na UI.
+  const handleClearSession = useCallback(() => {
+    if (!level) return;
+    // clearSession() (do useLevelSessionPersistence) cancela também o
+    // autosave debounced pendente, não só apaga o localStorage.
+    clearSession();
+    resetToBlankState();
+    showToast?.('Fase limpa!', 'success');
+  }, [level, clearSession, resetToBlankState, showToast]);
+
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
   const applyStep = useCallback((st) => {
     if (!st) return;
@@ -834,6 +869,7 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
         onSizeHint={effectiveShortestWord ? handleWordleHint : handleSizeHint}
         onExportSession={handleExportSession}
         onImportSessionFile={handleImportSessionFile}
+        onClearSession={handleClearSession}
       />
 
       <div className="workspace">
