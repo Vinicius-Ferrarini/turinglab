@@ -43,7 +43,21 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       `null`/`false` com `console.warn`, sem derrubar o chamador.
       Testes: `npx vitest run storageAdapter.test.js` 12/12. `npm test`
       completo: **2028/2028 passando** (23 arquivos) — sem regressão.
-- [ ] **3. `useTMGraph.js`/`usePDAGraph.js`: `reset(initial)`** — teste primeiro
+- [x] **3. `useTMGraph.js`/`usePDAGraph.js`: `reset(initial)`** ✅
+      `src/__tests__/graphReset.test.js` (7 testes, TDD — falhou antes por
+      `pdaGraphReducer`/`tmGraphReducer` não exportados). Reducers internos
+      (antes `reducer` local) renomeados e exportados (`pdaGraphReducer`,
+      `tmGraphReducer`), junto com `EMPTY_PDA_GRAPH`/`EMPTY_TM_GRAPH` — mesmo
+      padrão de `createHistoryStack` em `useHistory.js` (reducer puro
+      testável sem montar React). `reset()` virou `reset(initialGraph =
+      EMPTY)`: sem args continua idêntico (volta ao grafo vazio); com um
+      objeto `{nodes, transitions}`, o `RESET` hidrata `present` DIRETO, sem
+      empurrar o present anterior pro `past` — confirmado que um `UNDO` logo
+      após `reset(initial)` é no-op (não existe "desfazer" pra antes da
+      hidratação). Todo call-site existente (`loadLevel`/`goLevel` chamando
+      `g.reset()` sem args) continua funcionando sem mudança.
+      Testes: `npx vitest run graphReset.test.js` 7/7. `npm test` completo:
+      **2035/2035 passando** (24 arquivos) — sem regressão.
 - [ ] **4. Içar Descrição Formal (AFD e AP)** — componentes controlados
 - [ ] **5. `useLevelSessionPersistence.js`** + integração nos 4 `loadLevel`
 - [ ] **6. E2E Playwright (Feature A)** — 4 specs, um por módulo

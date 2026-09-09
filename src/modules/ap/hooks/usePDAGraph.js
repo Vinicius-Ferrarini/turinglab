@@ -10,6 +10,7 @@ let _uid = 0;
 const genUid = () => `_ap${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
 
 const EMPTY = { nodes: [], transitions: [] };
+export const EMPTY_PDA_GRAPH = EMPTY;
 const initial = { past: [], present: EMPTY, future: [], lastEmptyAdd: null };
 
 // COMMIT = muda com histórico; SET = muda sem histórico (arraste/rascunho);
@@ -18,7 +19,13 @@ const initial = { past: [], present: EMPTY, future: [], lastEmptyAdd: null };
 // arrastar/renomear) — remove a última entrada de past sem tocar em present/future;
 // SQUASH = funde no commit anterior (preencher a seta recém-criada não vira 2 passos).
 // lastEmptyAdd = índice da seta recém-criada vazia (p/ a fusão); qualquer outra ação zera.
-function reducer(state, action) {
+// RESET(next) hidrata `present` DIRETO (sem empurrar o present anterior pro
+// past) — usado tanto pelo reset() de sempre (next=EMPTY) quanto pela
+// hidratação de sessão salva (next=snapshot restaurado): um Ctrl+Z logo após
+// restaurar não deve voltar pro grafo vazio, ver useLevelSessionPersistence.js.
+// Exportado (não só usado internamente) para ser testável como reducer puro,
+// mesmo padrão de createHistoryStack em useHistory.js.
+export function pdaGraphReducer(state, action) {
   const { past, present, future } = state;
   switch (action.type) {
     case 'COMMIT':   return { past: [...past, present], present: action.next, future: [], lastEmptyAdd: action.emptyAdd ?? null };
@@ -43,12 +50,15 @@ function reducer(state, action) {
 }
 
 export default function usePDAGraph({ showToast, selectedNodes = [], setSelectedNodes = () => {} } = {}) {
-  const [hist, dispatch] = useReducer(reducer, initial);
+  const [hist, dispatch] = useReducer(pdaGraphReducer, initial);
   const { nodes, transitions } = hist.present;
   const canUndo = hist.past.length > 0;
   const canRedo = hist.future.length > 0;
 
-  const reset    = useCallback(() => { _uid = 0; dispatch({ type: 'RESET', next: EMPTY }); }, []);
+  // reset() sem args (todo call-site atual) continua idêntico: volta pro
+  // grafo vazio. reset({ nodes, transitions }) — usado pela hidratação de
+  // sessão salva — carrega o snapshot direto em `present`, sem entrar em `past`.
+  const reset    = useCallback((initialGraph = EMPTY) => { _uid = 0; dispatch({ type: 'RESET', next: initialGraph }); }, []);
   const undo     = useCallback(() => {
     if (!hist.past.length) return;
     dispatch({ type: 'UNDO' });

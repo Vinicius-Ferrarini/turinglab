@@ -8,9 +8,15 @@ let _uid = 0;
 const genUid = () => `_mt${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
 
 const EMPTY = { nodes: [], transitions: [] };
+export const EMPTY_TM_GRAPH = EMPTY;
 const initial = { past: [], present: EMPTY, future: [] };
 
-function reducer(state, action) {
+// RESET(next) hidrata `present` DIRETO (sem empurrar o present anterior pro
+// past) — usado tanto pelo reset() de sempre (next=EMPTY) quanto pela
+// hidratação de sessão salva (next=snapshot restaurado), ver
+// useLevelSessionPersistence.js. Exportado para ser testável como reducer
+// puro, mesmo padrão de createHistoryStack em useHistory.js.
+export function tmGraphReducer(state, action) {
   const { past, present, future } = state;
   switch (action.type) {
     case 'COMMIT':   return { past: [...past, present], present: action.next, future: [] };
@@ -30,12 +36,15 @@ function reducer(state, action) {
 }
 
 export default function useTMGraph({ showToast, selectedNodes = [], setSelectedNodes = () => {} } = {}) {
-  const [hist, dispatch] = useReducer(reducer, initial);
+  const [hist, dispatch] = useReducer(tmGraphReducer, initial);
   const { nodes, transitions } = hist.present;
   const canUndo = hist.past.length > 0;
   const canRedo = hist.future.length > 0;
 
-  const reset     = useCallback(() => { _uid = 0; dispatch({ type: 'RESET', next: EMPTY }); }, []);
+  // reset() sem args (todo call-site atual) continua idêntico: volta pro
+  // grafo vazio. reset({ nodes, transitions }) — usado pela hidratação de
+  // sessão salva — carrega o snapshot direto em `present`, sem entrar em `past`.
+  const reset     = useCallback((initialGraph = EMPTY) => { _uid = 0; dispatch({ type: 'RESET', next: initialGraph }); }, []);
   const undo      = useCallback(() => dispatch({ type: 'UNDO' }), []);
   const redo      = useCallback(() => dispatch({ type: 'REDO' }), []);
   const beginDrag = useCallback(() => dispatch({ type: 'SNAPSHOT' }), []);
