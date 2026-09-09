@@ -72,6 +72,49 @@ const KNOWN_DEAD_TRANSITIONS = new Set([
   'L09|q8|q10|A|A|L',
 ]);
 
+// Transições onde uma célula da bateria (acceptedWords/rejectedWords) foi
+// confirmada, à mão, como estruturalmente inalcançável por qualquer palavra
+// curta — não é o mesmo conceito de KNOWN_DEAD_TRANSITIONS acima (que é sobre
+// a AULA nunca demonstrar a transição); aqui é sobre a BATERIA DE VALIDAÇÃO
+// nunca precisar dela pra aprovar/reprovar um autômato. Ver
+// docs/PLAN_BATERIA_VALIDACAO_MT.md §2/§3.1. Chave:
+// `${label}|${from}|${to}|${read}|${write}|${move}`.
+const KNOWN_BATTERY_COVERAGE_GAPS = new Set([
+]);
+
+// ─── Regressão do bug relatado: MT_RECON L06 sem q5→q5 (b/B) passava "✓ Validar MT" ──
+// Mutation testing: para cada transição do gabarito, remove e roda
+// fuzzTMRecognizer de novo. Se ainda passar (ok:true), a bateria não notaria
+// um aluno que "esqueceu" aquela transição — exatamente a classe de bug
+// relatada (autômato incompleto validado como correto).
+describe('MT Reconhecedora — nenhuma transição do gabarito é removível sem que a bateria note', () => {
+  for (const level of MT_RECON_LEVELS) {
+    it(`${level.label}: remover qualquer transição do gabarito faz a bateria falhar`, () => {
+      const graph = lastGraphStep(level).stateUpdate;
+      const transitions = graph.transitions;
+      const undetected = [];
+      for (let i = 0; i < transitions.length; i++) {
+        const mutated = { states: graph.nodes, transitions: transitions.filter((_, idx) => idx !== i) };
+        const res = fuzzTMRecognizer(mutated, level);
+        if (res.ok) {
+          const t = transitions[i];
+          const key = `${level.label}|${t.from}|${t.to}|${t.read}|${t.write}|${t.move}`;
+          if (!KNOWN_BATTERY_COVERAGE_GAPS.has(key)) undetected.push(t);
+        }
+      }
+      expect(
+        undetected,
+        undetected.length
+          ? `${level.label}: ${undetected.length} transição(ões) removível(is) sem a bateria notar — ` +
+            undetected.map(t => `${t.from}->${t.to} (${t.read || '□'};${t.write || '□'},${t.move})`).join(', ') +
+            `. Adicione uma palavra a acceptedWords/rejectedWords que force essa transição a existir, ou, ` +
+            `se comprovadamente inalcançável, documente em KNOWN_BATTERY_COVERAGE_GAPS.`
+          : undefined
+      ).toHaveLength(0);
+    });
+  }
+});
+
 describe('MT Reconhecedora — sanidade básica de cada nível', () => {
   for (const level of MT_RECON_LEVELS) {
     it(`${level.label}: tem estado inicial, ao menos um final, e alfabeto`, () => {

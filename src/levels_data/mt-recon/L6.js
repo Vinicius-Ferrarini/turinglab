@@ -12,7 +12,7 @@ const MT_RECON_L6 = {
   language:    '{w ∈ {a,b}* / |w|a = |w|b}',
   description: 'Reconheça palavras com a mesma quantidade de "a" e de "b", em qualquer ordem.',
   hint:        'Repita: ache um "a" e um "b" (em qualquer posição), marque os dois, volte ao início. Aceita quando não sobrar nenhum dos dois.',
-  acceptedWords: ["","ab","ba","abba","baba","aabb","abab"],
+  acceptedWords: ["","ab","ba","abba","baba","aabb","abab","bbaa"],
   rejectedWords: ["a","b","aab","abb","aabbb","aaabb"],
   formalDescription: {
     sigma:   '{a,b}',
