@@ -19,6 +19,32 @@ isenta — não importa onde o cabeçote parou.
 UI + testes unitários) e `0376c58` (E2E). Suíte final: `npm test` 2131/2131,
 `npx playwright test` 85/85, `eslint` 0 erros.
 
+## 6. Follow-up: o simulador manual também precisava refletir a regra
+
+Depois do fix acima, o usuário testou o L06 na prática e notou que "✓
+Validar MT" reprovava certo, mas o **simulador passo a passo (🔬 Simular)**
+e a **lista de testes manuais (aba Desenho)** ainda diziam "ACEITA" pro
+mesmo autômato incorreto — porque essas duas ferramentas leem `status` bruto
+de `simulateTM`/`simulateTMSteps` diretamente (só estado final), nunca
+passaram pela checagem nova (que só existia DENTRO de `fuzzTMRecognizer`/
+`fuzzTMTransducer`).
+
+Corrigido (commit `7d96aac`) sem mudar o significado de `status` no motor
+(evita quebrar outros consumidores que dependem de ACCEPTED/REJECTED/LOOP
+puros, ex. aula guiada) — em vez disso, exportei `headRewound()` e passei a
+computá-lo nos pontos de UI que testam o grafo do PRÓPRIO aluno:
+- `MTSimPanel.jsx` (Reconhecedora): selo âmbar dedicado "⚠️ CABEÇOTE NÃO
+  VOLTOU" quando `ACCEPTED` mas não recuou — nem verde nem vermelho.
+- Chip da lista de testes manuais (Reconhecedora, modo Desenho) e tabela de
+  resultados (Transdutora, aba Desenho): mesma distinção visual.
+- Nunca aplicado ao gabarito oficial (que já sempre recua, por construção —
+  ver auditoria §3).
+
+9 testes E2E novos/estendidos (`mt_recon_head_rewind.spec.js`,
+`mt_trans_head_rewind.spec.js`), incluindo o caso "sem falso-positivo" pra
+automatos que recuam certo. Suíte final: `npm test` 2131/2131,
+`npx playwright test` 90/90.
+
 ## 1. Definindo a regra com precisão (1ª tentativa estava errada, corrigida)
 
 "1º caractere" não pode ser uma posição fixa (`2`, ou `3` com marcador) —
