@@ -2,6 +2,13 @@
 
 **Status:** aceita
 
+> **Atualização (ADR 0012):** o "Gatilho de limpeza" descrito abaixo (limpar
+> a sessão automaticamente ao sair da fase pela `EndScreen` depois de vencer)
+> foi **substituído** por uma ação manual explícita ("🗑 Limpar Fase", com
+> confirmação) — ver `docs/adr/0012-estrelas-no-export-e-limpeza-manual-de-fase.md`.
+> O resto desta ADR (schema do envelope, `uid` nunca persistido, salvar sem
+> validar, `.json` em vez de XML) continua valendo sem mudança.
+
 ## Contexto
 
 Antes desta mudança, todo o estado de uma fase em andamento (grafo desenhado,
