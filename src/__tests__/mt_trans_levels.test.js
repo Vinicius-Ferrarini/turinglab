@@ -213,6 +213,10 @@ const WRONG_OUTPUT_FIXTURE_LEVEL = {
   testWords: ['a'],
   validate: (w) => (w === 'a' ? 'X' : null),
 };
+// move:'S' (fica parado) — a MT nunca sai do 1º caractere, então a checagem
+// de "cabeçote voltou pro início" (docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md)
+// não interfere no que este fixture testa (conteúdo da fita), mantendo a
+// fixture focada só em write certo/errado.
 function wrongOutputGraph(write) {
   return {
     states: [
@@ -220,7 +224,7 @@ function wrongOutputGraph(write) {
       { id: 'q1', isInitial: false, isFinal: true },
     ],
     transitions: [
-      { from: 'q0', to: 'q1', read: 'a', write, move: 'R' },
+      { from: 'q0', to: 'q1', read: 'a', write, move: 'S' },
     ],
   };
 }

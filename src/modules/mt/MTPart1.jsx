@@ -500,6 +500,8 @@ export default function MTPart1({ onBack, progress, updateProgress,
         ? `Loop detectado para "${show}". Verifique se a MT para em todos os casos.`
         : res.reason === 'rejected'
         ? `Sua MT não aceita "${show}" (parou em estado não-final).`
+        : res.reason === 'head-not-rewound'
+        ? `Sua MT aceita "${show}" e escreve certo, mas o cabeçote não volta pro 1º caractere do resultado antes de parar — revise a "volta" antes do estado final.`
         : `Para "${show}": sua MT escreveu "${res.got}" na fita, mas o esperado era "${res.expected}".`;
       // Erro fica só no balão vermelho do painel lateral (result.*) — o
       // Maurílio não comenta erros, só sucesso/dicas.

@@ -625,6 +625,8 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
         ? `Loop detectado para "${show}". Verifique se a MT para em todos os casos.`
         : res.reason === 'wrongly-accepted'
         ? `Sua MT aceita "${show}" indevidamente (não pertence à linguagem).`
+        : res.reason === 'head-not-rewound'
+        ? `Sua MT aceita "${show}", mas o cabeçote não volta pro 1º caractere da palavra antes de parar — revise a "volta" antes do estado final.`
         : `Sua MT não aceita "${show}" (deveria pertencer à linguagem).`;
       // Erro fica só no toast do topo — o Maurílio não comenta erros, só
       // sucesso/dicas.

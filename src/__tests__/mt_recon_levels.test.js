@@ -127,6 +127,73 @@ describe('MT Reconhecedora — nenhuma transição do gabarito é removível sem
   }
 });
 
+// ─── Regressão: MT que aceita mas não recua o cabeçote ao 1º caractere ──────
+// Bug relatado pelo usuário com 2 exports reais de sessão do L06 (ver
+// docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md) — grafos copiados literalmente
+// dos .json exportados, só removendo campos irrelevantes pra validação
+// (uid/x/y/label). fuzzTMRecognizer só checava estado final; um autômato
+// que aceita "ab" mas termina com o cabeçote fora do 1º caractere passava
+// indevidamente.
+const L06_HEAD_NOT_REWOUND_GRAPH = {
+  states: [
+    { id: 'q0', isInitial: true, isFinal: false },
+    { id: 'q1', isInitial: false, isFinal: false },
+    { id: 'q2', isInitial: false, isFinal: false },
+    { id: 'q3', isInitial: false, isFinal: false },
+    { id: 'q4', isInitial: false, isFinal: true },
+  ],
+  transitions: [
+    { from: 'q0', to: 'q1', read: 'a', write: 'A', move: 'R' },
+    { from: 'q0', to: 'q3', read: 'b', write: 'B', move: 'R' },
+    { from: 'q1', to: 'q2', read: 'b', write: 'B', move: 'L' },
+    { from: 'q2', to: 'q0', read: '', write: '', move: 'R' },
+    { from: 'q2', to: 'q2', read: 'a', write: 'a', move: 'L' },
+    { from: 'q2', to: 'q2', read: 'b', write: 'b', move: 'L' },
+    { from: 'q2', to: 'q2', read: 'A', write: 'A', move: 'L' },
+    { from: 'q2', to: 'q2', read: 'B', write: 'B', move: 'L' },
+    { from: 'q3', to: 'q2', read: 'a', write: 'A', move: 'L' },
+    { from: 'q0', to: 'q4', read: '', write: '', move: 'L' },
+    { from: 'q0', to: 'q0', read: 'A', write: 'A', move: 'R' },
+    { from: 'q0', to: 'q0', read: 'B', write: 'B', move: 'R' },
+    { from: 'q1', to: 'q1', read: 'a', write: 'a', move: 'R' },
+    { from: 'q1', to: 'q1', read: 'B', write: 'B', move: 'R' },
+    { from: 'q3', to: 'q3', read: 'b', write: 'b', move: 'R' },
+    { from: 'q3', to: 'q3', read: 'A', write: 'A', move: 'R' },
+  ],
+};
+// Mesmo grafo + q4 deixa de ser final, ganha os 2 self-loops de varredura
+// (A/B, move L) e um novo q5 (final) alcançado só depois de recuar até o
+// branco antes do 1º caractere — exatamente a correção que o usuário fez.
+const L06_HEAD_REWOUND_GRAPH = {
+  states: [
+    { id: 'q0', isInitial: true, isFinal: false },
+    { id: 'q1', isInitial: false, isFinal: false },
+    { id: 'q2', isInitial: false, isFinal: false },
+    { id: 'q3', isInitial: false, isFinal: false },
+    { id: 'q4', isInitial: false, isFinal: false },
+    { id: 'q5', isInitial: false, isFinal: true },
+  ],
+  transitions: [
+    ...L06_HEAD_NOT_REWOUND_GRAPH.transitions,
+    { from: 'q4', to: 'q5', read: '', write: '', move: 'R' },
+    { from: 'q4', to: 'q4', read: 'A', write: 'A', move: 'L' },
+    { from: 'q4', to: 'q4', read: 'B', write: 'B', move: 'L' },
+  ],
+};
+const L06_HEAD_REWIND_LEVEL = { acceptedWords: ['ab'], rejectedWords: [] };
+
+describe('MT Reconhecedora — cabeçote tem que voltar ao 1º caractere ao aceitar (palavra não-vazia)', () => {
+  it('L06 (grafo real do usuário): aceita "ab" mas NÃO recua o cabeçote — deve ser rejeitado', () => {
+    const res = fuzzTMRecognizer(L06_HEAD_NOT_REWOUND_GRAPH, L06_HEAD_REWIND_LEVEL);
+    expect(res.ok, `esperado ok:false — ${JSON.stringify(res)}`).toBe(false);
+  });
+
+  it('L06 (grafo corrigido pelo usuário): aceita "ab" E recua o cabeçote — deve passar', () => {
+    const res = fuzzTMRecognizer(L06_HEAD_REWOUND_GRAPH, L06_HEAD_REWIND_LEVEL);
+    expect(res.ok, `esperado ok:true — ${JSON.stringify(res)}`).toBe(true);
+  });
+});
+
 describe('MT Reconhecedora — sanidade básica de cada nível', () => {
   for (const level of MT_RECON_LEVELS) {
     it(`${level.label}: tem estado inicial, ao menos um final, e alfabeto`, () => {

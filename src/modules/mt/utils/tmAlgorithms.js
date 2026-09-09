@@ -8,16 +8,28 @@
 export const BLANK = '□';
 export const MOVE_DELTA = { R: 1, L: -1, S: 0 };
 
+// Índice do 1º caractere "de verdade" da fita: pula os brancos de borda e,
+// se houver marcador de controle (level.startMarker/outputMarker) bem ali,
+// pula ele também — o marcador não é conteúdo, é controle interno. Usado
+// tanto por extractTapeOutput (extrai a saída a partir daqui) quanto pela
+// checagem "o cabeçote voltou pro início?" (docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md)
+// — as duas precisam concordar sobre onde a saída "começa".
+export function firstOutputIndex(tape, marker = null) {
+  let lo = 0;
+  while (lo < tape.length && tape[lo] === BLANK) lo++;
+  if (marker != null && tape[lo] === marker) lo++;
+  return lo;
+}
+
 // Extrai a saída "visível" de uma fita final: remove os brancos de borda e,
 // se a MT usa um marcador de controle na 1ª célula — seja porque foi inserido
 // de fora (level.startMarker) ou porque a própria MT o escreve sozinha ao
 // iniciar (level.outputMarker, ex.: '@') — remove essa célula também. O aluno
 // vê só o resultado da transformação, não o marcador de controle interno.
 export function extractTapeOutput(tape, marker = null) {
-  let lo = 0, hi = tape.length - 1;
-  while (lo <= hi && tape[lo] === BLANK) lo++;
+  const lo = firstOutputIndex(tape, marker);
+  let hi = tape.length - 1;
   while (hi >= lo && tape[hi] === BLANK) hi--;
-  if (marker != null && tape[lo] === marker) lo++;
   return tape.slice(lo, hi + 1).join('');
 }
 
@@ -67,46 +79,70 @@ export function simulateTM(graph, inputWord, maxSteps = 2000, startMarker = null
     ? 'ACCEPTED'
     : 'REJECTED';
 
-  return { status, tape: [...tape], finalState, steps };
+  return { status, tape: [...tape], finalState, steps, head };
+}
+
+// Checa se, ao aceitar `word` (não-vazia), o cabeçote voltou pro 1º
+// caractere "de verdade" da fita (mesma noção de firstOutputIndex — pula
+// brancos de borda e o marcador, se houver). Palavra vazia é isenta (não há
+// "1º caractere" nem posição errada possível — ver
+// docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md §1). A posição-alvo é DINÂMICA,
+// não uma constante fixa: quando a saída cresce pra ESQUERDA em relação à
+// entrada (ex. multiplicação com carry final, "4"×3="12"), o novo 1º
+// caractere fica numa posição diferente de onde a palavra começou — e
+// pousar ali é o comportamento CORRETO, não um erro.
+function headRewound(word, tape, head, marker) {
+  if (word === '') return true;
+  return head === firstOutputIndex(tape, marker);
 }
 
 // ── Validador de MT Transdutora ───────────────────────────────────────────────
 // Recebe a MT do aluno e o objeto de nível. Pra cada testWord: (1) a MT tem
-// que terminar em estado final, E (2) a fita final (sem □ de borda/marcador)
-// tem que bater com level.validate(word) — as duas condições, não só a
-// primeira (ver docs/PLAN_BATERIA_VALIDACAO_MT.md §3.2: antes desta função só
-// checava (1), então uma MT que aceitava certo mas escrevia qualquer coisa
-// passava "✓ Validar MT" sem nenhum aviso).
+// que terminar em estado final, (2) a fita final (sem □ de borda/marcador)
+// tem que bater com level.validate(word) (ver docs/PLAN_BATERIA_VALIDACAO_MT.md
+// §3.2 — antes só checava (1)), e (3) se a palavra não é vazia, o cabeçote
+// tem que ter voltado pro 1º caractere da saída (ver
+// docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md — antes NENHUMA das duas funções
+// checava a posição do cabeçote).
 export function fuzzTMTransducer(graph, level) {
   // Remove a palavra vazia da bateria quando o nível pede (skipEmptyWord)
   let words = level.testWords ?? [];
   if (level.skipEmptyWord) words = words.filter(w => w !== '');
 
   for (const word of words) {
-    const { status, tape } = simulateTM(graph, word, 2000, level.startMarker ?? null);
+    const { status, tape, head } = simulateTM(graph, word, 2000, level.startMarker ?? null);
     if (status === 'LOOP')     return { ok: false, counterexample: word, reason: 'loop' };
     if (status !== 'ACCEPTED') return { ok: false, counterexample: word, reason: 'rejected' };
+    const marker = level.startMarker ?? level.outputMarker ?? null;
     const expected = level.validate?.(word);
-    const got = extractTapeOutput(tape, level.startMarker ?? level.outputMarker ?? null);
+    const got = extractTapeOutput(tape, marker);
     if (expected != null && got !== expected) {
       return { ok: false, counterexample: word, reason: 'wrong-output', expected, got };
+    }
+    if (!headRewound(word, tape, head, marker)) {
+      return { ok: false, counterexample: word, reason: 'head-not-rewound' };
     }
   }
   return { ok: true };
 }
 
 // ── Validador de MT Reconhecedora ─────────────────────────────────────────────
-// Recebe a MT do aluno e o objeto de nível. Aceita se para em estado final —
-// o conteúdo da fita ao final NÃO importa (diferente da transdutora). Compara
-// contra level.acceptedWords/rejectedWords (mesmo padrão de bateria do AFD/AP).
+// Recebe a MT do aluno e o objeto de nível. Aceita se para em estado final E
+// (se a palavra não é vazia) o cabeçote volta pro 1º caractere — o conteúdo
+// da fita em si NÃO importa (diferente da transdutora). Compara contra
+// level.acceptedWords/rejectedWords (mesmo padrão de bateria do AFD/AP).
 export function fuzzTMRecognizer(graph, level) {
+  const marker = level.startMarker ?? null;
   for (const word of level.acceptedWords ?? []) {
-    const { status } = simulateTM(graph, word);
+    const { status, tape, head } = simulateTM(graph, word, 2000, marker);
     if (status === 'LOOP')     return { ok: false, counterexample: word, reason: 'loop', expectedAccept: true };
     if (status !== 'ACCEPTED') return { ok: false, counterexample: word, reason: 'rejected', expectedAccept: true };
+    if (!headRewound(word, tape, head, marker)) {
+      return { ok: false, counterexample: word, reason: 'head-not-rewound', expectedAccept: true };
+    }
   }
   for (const word of level.rejectedWords ?? []) {
-    const { status } = simulateTM(graph, word);
+    const { status } = simulateTM(graph, word, 2000, marker);
     if (status === 'ACCEPTED') return { ok: false, counterexample: word, reason: 'wrongly-accepted', expectedAccept: false };
   }
   return { ok: true };
