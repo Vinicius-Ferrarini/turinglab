@@ -252,4 +252,72 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       claro ("outra fase"), sem alterar em nada o estado da fase atual.
       Testes: `npx playwright test` — **74/74 passando** (3 novos +
       todos os 71 já existentes, zero regressão). `npm test`: 2076/2076.
-- [ ] **10. Fechamento** — CLAUDE.md, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e`
+- [x] **10. Fechamento** ✅
+      `CLAUDE.md`: nova seção "Session persistence & export/import (.json)"
+      logo depois de "Progress persistence" — deixa explícito que é um
+      mecanismo paralelo (nunca toca `turinglab_progress`), descreve os 4
+      arquivos de `src/modules/shared/persistence/` e o padrão
+      `applyRestoredPayload` reaproveitado por autosave e import.
+      **Incidente durante esta etapa, sem perda de trabalho**: ao comparar
+      `npm run validate:levels` contra o baseline pré-tarefa, rodei
+      `git checkout 4402168 -- .` pra inspecionar o estado antigo — isso
+      sobrescreveu a working tree (não o histórico) com os arquivos do
+      commit anterior a toda a Fase A/B. Revertido na hora com
+      `git checkout HEAD -- .` + `git stash pop` (a única mudança não
+      commitada era o próprio parágrafo do CLAUDE.md desta etapa, que
+      voltou intacto do stash). Conferido via `git status`/`npm test`
+      logo em seguida: nada foi perdido, `HEAD` nunca se moveu.
+      **Achado nessa comparação, fora do escopo desta tarefa**:
+      `npm run validate:levels` acusa 58/62 níveis com problema (189 erros)
+      tanto no commit anterior a esta tarefa (`4402168`) quanto agora —
+      números idênticos nos dois — confirmando que é uma pendência
+      pré-existente de dados de nível (`boardWords`/`boardDoneUpTo`
+      dessincronizados em vários níveis AFD), sem nenhuma relação com
+      persistência de sessão. Não é meu lugar consertar aqui (fora do
+      escopo do prompt, mexe em `levels_data/`, não em
+      `shared/persistence/`) — registrado aqui só como transparência do que
+      foi observado, não como algo corrigido ou ignorado silenciosamente.
+
+## Validação final
+
+- [x] `npm run lint` — **0 erros, 36 warnings** (todos os já esperados/
+      downgradados no `eslint.config.js` — nenhum novo introduzido; a
+      contagem no repo inteiro CAIU de 38→36 em relação ao início da
+      tarefa, por corrigir de passagem 2 dependências `wordleGame`
+      ausentes pré-existentes no AP e no MT-Recon durante o item 5)
+- [x] `npm test` — **2076/2076 passando** (26 arquivos). 1999 testes já
+      passavam antes do 1º commit desta tarefa (confirmado: a suíte, já
+      incluindo os 17 primeiros testes de `sessionSnapshot.test.js`, deu
+      2016/2016 logo no item 1) — **77 testes novos** desta tarefa:
+      `sessionSnapshot` (17), `storageAdapter` (12), `graphReset` (7),
+      formal description içada (6 no AFD + 15 novos no AP), `exportImportFile`
+      (21, incluindo `describeImportError`). `OPTIMIZATION_PROGRESS.md`
+      documenta um baseline de 1082 de uma tarefa bem anterior — o
+      repositório cresceu bastante desde então (mais níveis, mais módulos),
+      não é comparável 1:1 com os números acima.
+- [x] `npm run build` — limpo, sem warnings de chunking. Chunk principal
+      **549.48 KB raw / 162.42 KB gzip** — idêntico ao estado do repositório
+      antes desta tarefa (549.47 KB, confirmado via `git stash` no item 5);
+      todo o código novo (`shared/persistence/*`, telas dos 4 módulos) vive
+      em chunks lazy, nunca no chunk carregado eagerly.
+- [x] `npx playwright test` (`npm run test:e2e`) — **74/74 passando** (14
+      arquivos de spec: os 10 já existentes antes desta tarefa + os 4 novos
+      desta tarefa com 26 testes — 23 de persistência de sessão + 3 de
+      exportar/importar)
+
+## Resultado final
+
+| Item | Situação |
+|---|---|
+| Feature A — persistência de sessão (localStorage, autosave) | ✅ completa, 4 módulos, 23 testes E2E |
+| Feature B — exportar/importar `.json` | ✅ completa, 4 módulos, 3 testes E2E |
+| ADR 0011 | ✅ registrada, indexada em `docs/adr/README.md` |
+| `CLAUDE.md` atualizado | ✅ nova seção "Session persistence & export/import" |
+| Regressão em teste pré-existente | ✅ nenhuma (`npm test`/`npx eslint`/`npm run build`/`npx playwright test` — todos comparados contra o baseline anterior a cada etapa) |
+| Itens fora de escopo tocados | nenhum — `turinglab_progress`, os 3 motores de canvas, e `levels_data/` não foram alterados |
+
+Itens 0–10 implementados, testados e verificados nesta ordem, com TDD em
+todo item que envolveu lógica pura nova (testes escritos e confirmados
+falhando antes de cada implementação) e checkpoints de revisão do usuário
+ao final de cada uma das 3 fases (persistência / export-import /
+fechamento).

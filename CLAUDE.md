@@ -152,7 +152,43 @@ updated via `App.jsx`'s `updateProgress(moduleId, stars, extras)` (only overwrit
 count is higher — never regresses). Boss Mode (Trabalho/Prova) and the "Menor Palavra" minigame write
 to their own key namespaces (`boss-trabalho-{id}`, `boss-prova-{id}`, `word-guess-{id}`) so they don't
 double-count against the same exercise's normal-mode stars; `starTotals.js` explicitly excludes
-`boss-*` keys from the home screen's total.
+`boss-*` keys from the home screen's total. This mechanism only ever stores star counts — see below
+for the separate, much heavier, per-fase session state.
+
+### Session persistence & export/import (.json)
+
+Separate, parallel mechanism from the stars above (never touches `turinglab_progress`/
+`turinglab_progress_p2`) — see ADR 0011. While a student is inside one of the 4 canvas-drawing
+modules (AFD Parte 1, Autômatos com Pilha, MT Reconhecedora, MT Transdutora), the **full working
+state** of the current exercise (drawn graph — even structurally invalid/incomplete — tested words,
+"descubra a menor palavra" progress, and the Descrição Formal form, field by field) autosaves
+debounced (~500ms) to `localStorage['turinglab_session_v1:<moduleKey>:<levelId>']`, and can also be
+exported/imported as a `.json` file via the "⬇ Exportar"/"⬆ Importar" buttons in `GameHeader.jsx`.
+
+- `src/modules/shared/persistence/sessionSnapshot.js` — pure envelope builder/validator
+  (`buildSnapshot`/`isValidSnapshot`; schema version, moduleKey/levelId match, an allowlist of
+  payload fields per module) shared by **both** the localStorage autosave and the file export/import
+  — one schema, not two parallel formats.
+- `src/modules/shared/persistence/storageAdapter.js` — `localStorage` get/set/remove that never
+  throws (quota exceeded, private mode, disabled storage).
+- `src/modules/shared/persistence/useLevelSessionPersistence.js` — the autosave hook (a single
+  debounced write effect) plus `readLevelSession`/`clearLevelSession`, plain functions (not hooks)
+  called imperatively inside each orchestrator's `loadLevel`, right after the pre-existing reset-to-
+  blank (synchronously for AFD/AP; after the `await` for the two MT modules, whose `loadLevel` is
+  async because of the dynamic level `import()` — see "Level data" above).
+- `src/modules/shared/persistence/exportImportFile.js` — the file-specific glue (`Blob`/
+  `URL.createObjectURL`/`<a download>`/`FileReader`) plus the size (5MB) and depth/array-size sanity
+  checks applied to any imported file. Imported files are untrusted user input: only `JSON.parse`
+  (never `eval`/`new Function`), size rejected before any read, and a failed check never applies
+  anything partially.
+- Each of the 4 orchestrators exposes an `applyRestoredPayload(restored)` that both the autosave
+  hydration path and the "⬆ Importar" handler call — one function, not two divergent code paths for
+  "how do I put a saved snapshot back into state."
+- `uid`s on nodes are never part of the persisted payload — they're regenerated on every hydration,
+  exactly like when the student adds a brand-new node.
+- The session for a level is cleared only when the student reaches that level's `EndScreen`
+  (victory, or the AFD-L14 "impossible" screen) and clicks "Voltar ao Menu"/"Próxima" — never by
+  timeout or by size; an F5 or a trip back to the module's menu and back keeps it.
 
 ### AFD / AP / MT: same idea, genuinely different UX — don't assume parity
 
