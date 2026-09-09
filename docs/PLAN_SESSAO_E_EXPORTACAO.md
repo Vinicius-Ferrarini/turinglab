@@ -31,7 +31,18 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       por `moduleKey` — fail closed em campo desconhecido).
       Testes: `npx vitest run sessionSnapshot.test.js` 17/17. `npm test`
       completo: **2016/2016 passando** (22 arquivos) — sem regressão.
-- [ ] **2. `storageAdapter.js` + testes** (storage falso injetado)
+- [x] **2. `storageAdapter.js` + testes** (storage falso injetado) ✅
+      `src/__tests__/storageAdapter.test.js` (12 testes, TDD — confirmado
+      falhando antes) com um Map em memória fazendo o papel do `Storage`
+      (sem jsdom). `safeGetItem`/`safeSetItem`/`safeRemoveItem` fazem
+      JSON.parse/stringify internamente (único uso real é ler/escrever
+      envelopes de `sessionSnapshot.js`) e nunca lançam: chave ausente,
+      JSON corrompido, `storage.getItem`/`setItem`/`removeItem` lançando
+      (quota excedida simulada via exception), valor não serializável
+      (referência circular) e `storage` ausente/undefined — todos caem para
+      `null`/`false` com `console.warn`, sem derrubar o chamador.
+      Testes: `npx vitest run storageAdapter.test.js` 12/12. `npm test`
+      completo: **2028/2028 passando** (23 arquivos) — sem regressão.
 - [ ] **3. `useTMGraph.js`/`usePDAGraph.js`: `reset(initial)`** — teste primeiro
 - [ ] **4. Içar Descrição Formal (AFD e AP)** — componentes controlados
 - [ ] **5. `useLevelSessionPersistence.js`** + integração nos 4 `loadLevel`
