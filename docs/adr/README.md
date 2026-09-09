@@ -22,6 +22,7 @@ em `docs/archive/` em vez de duplicar o conteúdo.
 | [0008](0008-ap-canvas-unificado-com-afd.md) | AP migrou para o motor de canvas fixo + zoom do AFD | aceita |
 | [0009](0009-telemetria-consentimento-explicito.md) | Telemetria de pesquisa é opt-in com consentimento explícito | aceita |
 | [0010](0010-formal-validacao-contra-grafo-real.md) | Descrição Formal valida contra o grafo do aluno, não o gabarito | aceita |
+| [0011](0011-persistencia-de-sessao-e-exportacao-json.md) | Persistência de sessão por fase + exportar/importar em `.json` | aceita |
 
 ## Planos originais arquivados
 
