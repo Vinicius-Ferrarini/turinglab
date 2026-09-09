@@ -13,7 +13,7 @@ const MT_L24 = {
   description: "Tem como entrada dois números binários quaisquer no formato nro1+nro2=, e gera como saída os dois números somados no formato nro1+nro2=resultado – Soma binários.",
   hint:        "Vá ao final do 2º número, decremente-o e incremente o 1º número, repetindo até o 2º número zerar.",
   validate:    (w) => (()=>{const [a,b]=w.slice(0,-1).split('+'); return w+(parseInt(a,2)+parseInt(b,2)).toString(2);})(),
-  testWords:   ["0+0=","1+0=","0+1=","1+1=","10+1=","11+11="],
+  testWords:   ["0+0=","1+0=","0+1=","1+1=","10+1=","11+11=","0+100="],
   skipEmptyWord: true,
   formalDescription: {
     sigma:   '{0,1,+,=}',

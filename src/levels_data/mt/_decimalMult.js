@@ -74,7 +74,13 @@ function coverageBattery(N, maxCarry, testWords) {
 export function makeDecimalMultLevel(N, id, label) {
   const m = buildMachine(N);
   const { nodes, transitions, maxCarry } = m;
-  const testWords = ['0', '1', '5', '10', '99', '123'];
+  const curatedWords = ['0', '1', '5', '10', '99', '123'];
+  // A bateria de VALIDAÇÃO (level.testWords, o que fuzzTMTransducer usa em
+  // "✓ Validar MT") precisa da MESMA cobertura de 100% das transições que
+  // coverageBattery() já calculava só pra aula guiada — senão um aluno pode
+  // "esquecer" uma célula qc{c}→qc{c'} da tabela de carry sem a validação
+  // notar (mesma classe de bug do L06, ver docs/PLAN_BATERIA_VALIDACAO_MT.md).
+  const testWords = coverageBattery(N, maxCarry, curatedWords);
   const stateList = `{q1, ${Array.from({ length: maxCarry + 1 }, (_, c) => `qc${c}`).join(', ')}, qR, qf}`;
 
   const steps = [];
@@ -87,7 +93,7 @@ export function makeDecimalMultLevel(N, id, label) {
     stateUpdate: { nodes, transitions },
   });
 
-  for (const w of coverageBattery(N, maxCarry, testWords)) {
+  for (const w of testWords) {
     const res = String(parseInt(w, 10) * N);
     steps.push(...buildTransducerSim(w, {
       nodes, transitions,

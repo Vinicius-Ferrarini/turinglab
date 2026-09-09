@@ -12,7 +12,7 @@ const MT_L16 = {
   description: "Tem como entrada um número qualquer em decimal e gera como saída o número multiplicado por 2 – Decimal vezes 2.",
   hint:        "Dobre cada dígito e propague o carry (vem do dígito seguinte à direita) da direita para a esquerda.",
   validate:    (w) => String(parseInt(w,10)*2),
-  testWords:   ["0","1","5","10","99","123"],
+  testWords:   ["0","1","5","10","99","123","104","105","106","107","108","125","135","145","150","156","165","175","185"],
   skipEmptyWord: true,
   formalDescription: {
     sigma:   '{0,1,2,3,4,5,6,7,8,9}',
