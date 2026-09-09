@@ -16,7 +16,7 @@ const MT_L11 = {
       const shift=(alpha,c)=>{const i=alpha.indexOf(c); return i<0?null:alpha[(i+3)%alpha.length];};
       return [...w].map(c => shift(UPPER,c) ?? shift(LOWER,c) ?? shift(DIGITS,c) ?? c).join('');
     })(),
-  testWords:   ["ABC","abc123","Ola, Mundo!","XYZxyz789"],
+  testWords:   ["ABC","abc123","Ola, Mundo!","XYZxyz789","0","."],
   skipEmptyWord: true,
   formalDescription: {
     sigma:   '{A,B,C,a,b,c,0,1,2, ,,,.}',

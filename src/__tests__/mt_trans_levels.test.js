@@ -115,7 +115,18 @@ function pickSabotageSymbol(original, tapeAlphabet) {
 // pode aumentar) mas não finge que já está tudo coberto. Ao adicionar
 // testWords que fechem gaps de um nível, DIMINUA o número correspondente.
 const KNOWN_WRITE_GAP_CEILING = {
-  L10: 4, L11: 90, L12: 22, L14: 36, L16: 17, L17: 27, L18: 38,
+  // Diferente dos outros: 86 das 90 células do L11 leem um caractere FORA do
+  // alfabeto oficialmente declarado (level.alphabet só tem A,B,C/a,b,c/0,1,2/
+  // espaço/vírgula/ponto — mas o gabarito tem regras pra D-Z, dígitos 3-9,
+  // pontuação etc., herdadas de uma versão mais ampla da cifra). Nenhum
+  // testWord válido (restrito ao alfabeto declarado) jamais alcança essas
+  // células — não é "faltou testWord", é estrutural dado o alfabeto atual.
+  // As 4 alcançáveis (read='0'/'.') já foram fechadas com "0"/"." em
+  // testWords. Ver também o aviso "[GABARITO NÃO-OFICIAL... validar com o
+  // professor]" no cabeçalho de L11.js — não expandi o alfabeto declarado
+  // pra não tomar essa decisão de conteúdo sem confirmação.
+  L11: 86,
+  L10: 4, L12: 22, L14: 36, L16: 17, L17: 27, L18: 38,
   L19: 48, L20: 59, L21: 70, L22: 81, L23: 91, L24: 1,
 };
 
