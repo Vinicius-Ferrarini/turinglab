@@ -21,7 +21,7 @@ import useCanvasState, { INNER_W, INNER_H } from '../afd/hooks/useCanvasState.js
 import useToast from '../afd/hooks/useToast';
 import usePhaseTelemetry from '../afd/hooks/usePhaseTelemetry';
 import { MT_LEVEL_ORDER, loadMTLevel } from '../../levels_data/mt/index.js';
-import { fuzzTMTransducer, simulateTM, extractTapeOutput, BLANK } from './utils/tmAlgorithms';
+import { fuzzTMTransducer, simulateTM, extractTapeOutput, headRewound, BLANK } from './utils/tmAlgorithms';
 import { validateMTFormalFields, validateMTFormalTransitions } from './utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
@@ -424,12 +424,17 @@ export default function MTPart1({ onBack, progress, updateProgress,
     } else {
       // Simulação contra o grafo atual do aluno
       const mtGraph = { states: g.nodes, transitions: g.transitions };
-      const { status, tape } = simulateTM(mtGraph, word, 2000, level.startMarker ?? null);
+      const marker = level.startMarker ?? level.outputMarker ?? null;
+      const { status, tape, head } = simulateTM(mtGraph, word, 2000, level.startMarker ?? null);
       let output = '';
+      // Chegou em estado final mas o cabeçote não voltou pro 1º caractere do
+      // resultado não conta como aceita de verdade — ver
+      // docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md.
+      const headNotRewound = status === 'ACCEPTED' && !headRewound(word, tape, head, marker);
       if (status === 'ACCEPTED') {
-        output = extractTapeOutput(tape, level.startMarker ?? level.outputMarker ?? null) || BLANK;
+        output = extractTapeOutput(tape, marker) || BLANK;
       }
-      setDesenhoTests(prev => [{ word, status, output }, ...prev]);
+      setDesenhoTests(prev => [{ word, status, output, headNotRewound }, ...prev]);
     }
     setSimWord('');
   }, [level, simWord, activeTab, g.nodes, g.transitions]);
@@ -1081,7 +1086,14 @@ export default function MTPart1({ onBack, progress, updateProgress,
                             {t.word === '' ? 'λ' : t.word}
                           </td>
                           <td style={{ border: '1.5px solid #bbf7d0', padding: '3px 6px', textAlign: 'center' }}>
-                            {t.status === 'ACCEPTED'
+                            {t.status === 'ACCEPTED' && t.headNotRewound
+                              ? <span title="Chegou no estado final, mas o cabeçote não voltou pro 1º caractere do resultado — não conta como aceita."
+                                  style={{ display: 'inline-block', padding: '2px 6px', borderRadius: 4,
+                                  background: '#fde68a', color: '#854d0e', fontSize: 10, fontWeight: 900,
+                                  fontFamily: 'var(--font-comic)' }}>
+                                  ⚠️ CABEÇOTE NÃO VOLTOU
+                                </span>
+                              : t.status === 'ACCEPTED'
                               ? <b style={{ color: '#15803d', fontFamily: 'var(--font-comic)' }}>{t.output}</b>
                               : <span style={{ display: 'inline-block', padding: '2px 6px', borderRadius: 4,
                                   background: '#dc2626', color: '#fff', fontSize: 10, fontWeight: 900,

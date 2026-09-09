@@ -91,7 +91,7 @@ export function simulateTM(graph, inputWord, maxSteps = 2000, startMarker = null
 // entrada (ex. multiplicação com carry final, "4"×3="12"), o novo 1º
 // caractere fica numa posição diferente de onde a palavra começou — e
 // pousar ali é o comportamento CORRETO, não um erro.
-function headRewound(word, tape, head, marker) {
+export function headRewound(word, tape, head, marker) {
   if (word === '') return true;
   return head === firstOutputIndex(tape, marker);
 }

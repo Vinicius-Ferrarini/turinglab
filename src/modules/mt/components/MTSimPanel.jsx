@@ -13,6 +13,13 @@ const STATUS_LABEL = { ACCEPTED: '✅ ACEITA', REJECTED: '❌ REJEITADA', LOOP: 
 
 export default function MTSimPanel({
   configs, word, title, message, maxSteps,
+  // headRewound: true/false quando a simulação termina ACCEPTED numa palavra
+  // não-vazia (indica se o cabeçote voltou pro 1º caractere — ver
+  // docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md); null/undefined quando não se
+  // aplica (REJECTED/LOOP, ou palavra vazia). Chegar em estado final SEM
+  // recuar não conta como aceitação de verdade — mostra um selo/mensagem
+  // dedicados, distintos de ACEITA e de REJEITADA.
+  headRewound,
   onHighlight, onClose,
 }) {
   const safeConfigs = configs && configs.length > 0
@@ -42,6 +49,11 @@ export default function MTSimPanel({
   const isStuck = last && status === 'REJECTED';
   const isLoop  = last && status === 'LOOP';
   const noInitialState = isStuck && cur.stateId == null;
+  // Chegou em estado final, mas o cabeçote não voltou pro 1º caractere da
+  // palavra — não conta como aceitação de verdade (ver
+  // docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md). Distinto de isStuck (não achou
+  // transição) e de "aceita de verdade" — selo/mensagem próprios.
+  const headNotRewound = last && status === 'ACCEPTED' && headRewound === false;
 
   return (
     <div className="sim-panel-container">
@@ -61,8 +73,8 @@ export default function MTSimPanel({
               : word}
           </div>
           {last && (
-            <span className={`sim-result-badge ${status === 'ACCEPTED' ? 'accepted' : 'rejected'}`}>
-              {STATUS_LABEL[status] ?? status}
+            <span className={`sim-result-badge ${headNotRewound ? 'head-not-rewound' : status === 'ACCEPTED' ? 'accepted' : 'rejected'}`}>
+              {headNotRewound ? '⚠️ CABEÇOTE NÃO VOLTOU' : STATUS_LABEL[status] ?? status}
             </span>
           )}
         </div>
@@ -71,7 +83,7 @@ export default function MTSimPanel({
           <div className="mt-simp-tape-wrap">
             <TuringTape tape={cur.tape} headPosition={cur.head} compact />
           </div>
-          <div className={`sim-current-step ${isStuck || isLoop ? 'error' : cur.step === 0 ? 'info' : last ? 'done' : 'ok'} ap-simp-step`}>
+          <div className={`sim-current-step ${isStuck || isLoop || headNotRewound ? 'error' : cur.step === 0 ? 'info' : last ? 'done' : 'ok'} ap-simp-step`}>
             {noInitialState ? (
               <>
                 <span className="sim-step-icon">❌</span>
@@ -81,6 +93,11 @@ export default function MTSimPanel({
               <>
                 <span className="sim-step-icon">❌</span>
                 <span>Travou! Sem transição a partir de <b>{cur.stateId}</b> lendo "{show(cur.tape[cur.head])}".</span>
+              </>
+            ) : headNotRewound ? (
+              <>
+                <span className="sim-step-icon">⚠️</span>
+                <span>Chegou no estado final <b>{cur.stateId}</b>, mas o cabeçote não voltou pro 1º caractere da palavra — não conta como aceita.</span>
               </>
             ) : isLoop ? (
               <>

@@ -29,7 +29,7 @@ import { MT_RECON_LEVEL_ORDER, loadMTReconLevel, getShortestWord, getGabaritoGra
 import { buildNoAttemptHintMessage, buildSizeHintMessage } from '../afd/utils/sizeHint';
 import useWordGuessGame from '../shared/useWordGuessGame';
 import { findSecondShortestWord } from '../shared/wordExercises/findSecondShortestWord';
-import { fuzzTMRecognizer, simulateTM, simulateTMSteps } from '../mt/utils/tmAlgorithms';
+import { fuzzTMRecognizer, simulateTM, simulateTMSteps, headRewound } from '../mt/utils/tmAlgorithms';
 import { validateMTFormalFields, validateMTFormalTransitions } from '../mt/utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
@@ -530,9 +530,14 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
 
     // testMode === 'DRAWING': testa contra a MT do ALUNO (exploração — não logada).
     const mtGraph = { states: g.nodes, transitions: g.transitions };
-    const { status } = simulateTM(mtGraph, word, 2000, level.startMarker ?? null);
+    const marker = level.startMarker ?? null;
+    const { status, tape, head } = simulateTM(mtGraph, word, 2000, marker);
+    // Chegou em estado final mas o cabeçote não voltou pro 1º caractere não
+    // conta como aceita de verdade — ver docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md.
+    const accepted = status === 'ACCEPTED' && headRewound(word, tape, head, marker);
+    const headNotRewound = status === 'ACCEPTED' && !accepted;
     setTestedWords(prev => prev.some(t => t.word === display && t.mode === 'DRAWING')
-      ? prev : [{ word: display, mode: 'DRAWING', accepted: status === 'ACCEPTED' }, ...prev]);
+      ? prev : [{ word: display, mode: 'DRAWING', accepted, headNotRewound }, ...prev]);
     setSimWord('');
   }, [level, simWord, isDrawingUnlocked, testMode, testedWords, effectiveShortestWord, wordleGame, g.nodes, g.transitions, updateProgress, showToast, phaseExtras]);
 
@@ -559,8 +564,10 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
     const show = word === '' ? 'λ' : word;
     const mtGraph = { states: g.nodes, transitions: g.transitions };
     const configs = simulateTMSteps(mtGraph, word, SIM_MAX_STEPS, level.startMarker ?? null);
+    const last = configs[configs.length - 1];
+    const hr = last.status === 'ACCEPTED' ? headRewound(word, last.tape, last.head, level.startMarker ?? null) : null;
     openSim({ configs, word, maxSteps: SIM_MAX_STEPS, title: `Simulação: "${show}"`,
-      message: 'Passo a passo da SUA máquina (não é o gabarito):' });
+      message: 'Passo a passo da SUA máquina (não é o gabarito):', headRewound: hr });
     setSimWord('');
   }, [level, simWord, g.nodes, g.transitions, openSim]);
 
@@ -639,7 +646,8 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
       if (res.counterexample != null) {
         const configs = simulateTMSteps(mtGraph, res.counterexample, SIM_MAX_STEPS, level.startMarker ?? null);
         openSim({ configs, word: res.counterexample, maxSteps: SIM_MAX_STEPS,
-          title: `Falhou em "${show}"`, message: msg });
+          title: `Falhou em "${show}"`, message: msg,
+          headRewound: res.reason === 'head-not-rewound' ? false : null });
       }
     }
   }, [level, g, say, updateProgress, showToast, phaseExtras, openSim]);
@@ -1152,7 +1160,7 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
 
           <div className="words-list">
             {testedWords.map((t, i) => (
-              <div key={i} className={`word-row ${t.status ? t.status : t.accepted ? 'correct' : 'wrong'}`}>
+              <div key={i} className={`word-row ${t.status ? t.status : t.headNotRewound ? 'head-not-rewound' : t.accepted ? 'correct' : 'wrong'}`}>
                 <span>
                   {isDrawingUnlocked && (
                     <span className={`ap-word-mode-tag ${t.mode === 'DRAWING' ? 'drawing' : 'language'}`}>
@@ -1165,6 +1173,7 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
                   {t.status === 'shortest' ? '★ MENOR'
                     : t.status === 'correct' ? '✓'
                     : t.status === 'wrong' ? '✕'
+                    : t.headNotRewound ? '⚠️'
                     : t.accepted ? '✓' : '✕'}
                 </span>
               </div>
@@ -1205,7 +1214,7 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
         compactWhenLesson
         simPanel={sim && (
           <MTSimPanel key={simKey} configs={sim.configs} word={sim.word} maxSteps={sim.maxSteps}
-            title={sim.title} message={sim.message}
+            title={sim.title} message={sim.message} headRewound={sim.headRewound}
             onHighlight={handleSimHighlight} onClose={closeSim} />
         )}
         simPanelClassName="mt-simp-footer"

@@ -92,6 +92,10 @@
 .word-row.correct  { background: #bbf7d0; }
 .word-row.wrong    { background: #fecaca; }
 .word-row.shortest { background: #fef08a; border: 3px solid #000; font-size: 12px; }
+/* MT: chegou em estado final mas o cabeçote não voltou pro 1º caractere —
+   nem aceita de verdade nem "errada comum", âmbar (ver
+   docs/PLAN_CABECOTE_RETORNO_INICIO_MT.md). */
+.word-row.head-not-rewound { background: #fde68a; }
 
 .validate-btn {
   background: var(--accent-green);

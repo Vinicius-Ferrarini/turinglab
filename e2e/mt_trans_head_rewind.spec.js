@@ -82,3 +82,40 @@ test('L16: MT que aceita "0", escreve certo E já está no 1º caractere — "�
   await expect(errorToast).toBeVisible({ timeout: 4000 });
   await expect(errorToast).not.toContainText(/cabeçote não volta/i);
 });
+
+// ─── Aba "✏ Desenho" (lista de testes manuais) tem que refletir a mesma
+// regra, não só "✓ Validar MT" — mesmo relato do usuário, aplicado à
+// Transdutora. ────────────────────────────────────────────────────────────
+async function importOnly(page, move) {
+  const filePath = path.join(os.tmpdir(), `mt_trans_head_rewind_${Date.now()}.json`);
+  fs.writeFileSync(filePath, JSON.stringify(buildSnapshot(move)));
+
+  await goToMTTrans(page);
+  await page.locator('.menu-btn.primary', { hasText: 'L16' }).click();
+  await page.locator('canvas, svg').first().waitFor({ timeout: 8000 });
+
+  await page.locator('input[type="file"]').setInputFiles(filePath);
+  await expect(page.locator('.toast-notification.success')).toContainText(/importada/i);
+  await expect(page.locator('.canvas-inner .node')).toHaveCount(2);
+  fs.unlinkSync(filePath);
+}
+
+test('L16 (aba Desenho): testar "0" numa MT que não recua mostra aviso dedicado, não a saída em verde', async ({ page }) => {
+  await importOnly(page, 'R'); // snapshot já importa com activeTab:'desenho'
+
+  await page.locator('.word-input').fill('0');
+  await page.locator('.add-test-btn').first().click();
+
+  await expect(page.getByText('⚠️ CABEÇOTE NÃO VOLTOU')).toBeVisible({ timeout: 4000 });
+});
+
+test('L16 (aba Desenho): testar "0" numa MT que já recua mostra a saída normalmente (sem falso-positivo)', async ({ page }) => {
+  await importOnly(page, 'S');
+
+  await page.locator('.word-input').fill('0');
+  await page.locator('.add-test-btn').first().click();
+
+  await expect(page.getByText('⚠️ CABEÇOTE NÃO VOLTOU')).toHaveCount(0);
+  // Saída "0" aparece em negrito verde (célula da tabela de resultados).
+  await expect(page.locator('table b', { hasText: '0' }).first()).toBeVisible({ timeout: 4000 });
+});

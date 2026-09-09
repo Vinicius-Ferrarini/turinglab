@@ -87,7 +87,7 @@ function buildSnapshot(nodes, transitions) {
   };
 }
 
-async function importAndValidate(page, nodes, transitions) {
+async function importGraph(page, nodes, transitions) {
   const filePath = path.join(os.tmpdir(), `mt_recon_head_rewind_${Date.now()}.json`);
   fs.writeFileSync(filePath, JSON.stringify(buildSnapshot(nodes, transitions)));
 
@@ -98,9 +98,12 @@ async function importAndValidate(page, nodes, transitions) {
   await page.locator('input[type="file"]').setInputFiles(filePath);
   await expect(page.locator('.toast-notification.success')).toContainText(/importada/i);
   await expect(page.locator('.canvas-inner .node')).toHaveCount(nodes.length);
-
-  await page.getByRole('button', { name: /Validar MT/i }).click();
   fs.unlinkSync(filePath);
+}
+
+async function importAndValidate(page, nodes, transitions) {
+  await importGraph(page, nodes, transitions);
+  await page.getByRole('button', { name: /Validar MT/i }).click();
 }
 
 test('L06 (grafo real do usuário): aceita "ab" mas NÃO recua o cabeçote — "✓ Validar MT" tem que reprovar', async ({ page }) => {
@@ -117,4 +120,58 @@ test('L06 (grafo corrigido pelo usuário): aceita "ab" E recua o cabeçote — "
 
   await expect(page.locator('.toast-notification.success')).toContainText(/MT validada/i);
   await expect(page.locator('.toast-notification.error')).toHaveCount(0);
+});
+
+// ─── "🔬 Simular" (passo a passo) tem que refletir a mesma regra, não só
+// "✓ Validar MT" — reportado pelo usuário: o simulador dizia "ACEITA" pro
+// grafo que não recua o cabeçote. ─────────────────────────────────────────
+// Avança o MTSimPanel até o último passo (só tem ◀/▶, sem "ir pro fim").
+async function advanceSimToEnd(page) {
+  const next = page.locator('.sim-nav-btn').nth(2); // ⏮ ◀ ▶ (índice 2)
+  for (let i = 0; i < 20; i++) {
+    if (await next.isDisabled()) break;
+    await next.click();
+  }
+}
+
+test('L06 (grafo NÃO recua): "🔬 Simular" com "ab" mostra selo dedicado, não "ACEITA"', async ({ page }) => {
+  await importGraph(page, NOT_REWOUND_NODES, BASE_TRANSITIONS);
+
+  await page.locator('.word-input').fill('ab');
+  await page.getByRole('button', { name: /🔬 Simular/i }).click();
+  await advanceSimToEnd(page);
+
+  const badge = page.locator('.sim-result-badge');
+  await expect(badge).toBeVisible({ timeout: 4000 });
+  await expect(badge).toHaveClass(/head-not-rewound/);
+  await expect(badge).not.toHaveClass(/accepted/);
+  await expect(page.locator('.sim-current-step')).toContainText(/cabeçote não voltou/i);
+});
+
+test('L06 (grafo recua certo): "🔬 Simular" com "ab" mostra ACEITA normalmente (sem falso-positivo)', async ({ page }) => {
+  await importGraph(page, REWOUND_NODES, REWOUND_TRANSITIONS);
+
+  await page.locator('.word-input').fill('ab');
+  await page.getByRole('button', { name: /🔬 Simular/i }).click();
+  await advanceSimToEnd(page);
+
+  const badge = page.locator('.sim-result-badge');
+  await expect(badge).toBeVisible({ timeout: 4000 });
+  await expect(badge).toHaveClass(/accepted/);
+  await expect(badge).not.toHaveClass(/head-not-rewound/);
+});
+
+// ─── Chip da lista de palavras testadas (aba "✏️ Desenho"), fora do painel
+// de simulação — mesma regra tem que valer ali também. ──────────────────────
+test('L06 (grafo NÃO recua): testar "ab" na aba Desenho mostra chip de aviso, não ✓', async ({ page }) => {
+  await importGraph(page, NOT_REWOUND_NODES, BASE_TRANSITIONS);
+
+  await page.getByRole('button', { name: /✏️ Desenho/i }).click();
+  await page.locator('.word-input').fill('ab');
+  await page.locator('.add-test-btn').first().click();
+
+  const row = page.locator('.word-row').first();
+  await expect(row).toBeVisible({ timeout: 4000 });
+  await expect(row).toHaveClass(/head-not-rewound/);
+  await expect(row).toContainText('⚠️');
 });
