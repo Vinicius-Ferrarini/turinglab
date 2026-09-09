@@ -1217,8 +1217,10 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
           balloon={{ width: 320, height: 220, marginTop: -150 }}
           textStyle={{ padding: '20px 38px 52px', fontSize: 15 }}
           nextPrefix="Próximo: "
-          onMenu={() => { clearSession(); setVictory(false); setScreen('MENU'); }}
-          onNext={(lv) => { clearSession(); loadLevel(lv); }}
+          onMenu={() => setScreen('MENU')}
+          onNext={(lv) => loadLevel(lv)}
+          onExport={handleExportSession}
+          onAccessBoard={() => setVictory(false)}
         />
       )}
     </div>

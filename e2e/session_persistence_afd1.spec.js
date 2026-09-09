@@ -146,7 +146,7 @@ test.describe('AFD_1 — persistência de sessão por fase', () => {
     await expect(page.locator('.canvas-inner .node')).toHaveCount(1, { timeout: 8000 });
   });
 
-  test('vencer a fase e clicar "Voltar ao Menu" limpa a sessão (reabre em branco)', async ({ page }) => {
+  test('vencer a fase NÃO limpa mais nada — "Acessar Tabuleiro"/"Limpar Fase" controlam isso (ADR 0012)', async ({ page }) => {
     await goToAFD1(page);
     await openL05(page);
     await unlockBoard(page);
@@ -197,13 +197,44 @@ test.describe('AFD_1 — persistência de sessão por fase', () => {
     await tableInputs.nth(1).fill('q1');
     await page.getByRole('button', { name: /Validar Transições/i }).click();
 
-    // Mensagem de vitória varia por nível (successMsg custom) — verifica pelo
-    // botão da EndScreen em vez do texto, que é level-specific.
+    // EndScreen tem os 4 botões (ADR 0012): Voltar ao Menu, Exportar,
+    // Acessar Tabuleiro, Próxima (mensagem varia por nível — verifica pelos
+    // botões, não pelo texto, que é level-specific).
     await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toBeVisible({ timeout: 4000 });
-    await page.getByRole('button', { name: /Voltar ao Menu/i }).click();
+    // "⬇ Exportar" existe 2x na tela agora (GameHeader por baixo + EndScreen
+    // por cima) — a da EndScreen é a última no DOM.
+    await expect(page.getByRole('button', { name: /⬇ Exportar/i }).last()).toBeVisible();
+    await expect(page.getByRole('button', { name: /🎮 Acessar Tabuleiro/i })).toBeVisible();
 
+    // Clicar "Voltar ao Menu" SEM passar por "Acessar Tabuleiro" NÃO limpa
+    // nada — reabrir a mesma fase reabre a EndScreen de novo, com o grafo intacto.
+    await waitAutosave(page); // debounce do autosave (~500ms) — showVictoryScreen precisa ter sido persistido
+    await page.getByRole('button', { name: /Voltar ao Menu/i }).click();
     await page.locator('.menu-btn.primary:not([disabled])').first().click();
-    await expect(page.locator('.locked-overlay')).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(2);
+
+    // "🎮 Acessar Tabuleiro" fecha o overlay SEM navegar nem limpar — o
+    // grafo continua lá e o GameHeader (Limpar Fase) fica acessível.
+    await page.getByRole('button', { name: /🎮 Acessar Tabuleiro/i }).click();
+    await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toHaveCount(0);
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(2);
+    const clearBtn = page.getByRole('button', { name: /Limpar Fase/i });
+    await expect(clearBtn).toBeVisible();
+
+    // Essa escolha (dispensar sem limpar) também persiste: reabrir a fase
+    // depois vai direto pro tabuleiro, sem reabrir a EndScreen.
+    await waitAutosave(page);
+    await page.getByRole('button', { name: /⬅ Voltar/i }).click();
+    await page.locator('.menu-btn.primary:not([disabled])').first().click();
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(2, { timeout: 8000 });
+    await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toHaveCount(0);
+
+    // "🗑 Limpar Fase" (confirmação Sim) é a única coisa que de fato limpa.
+    await page.getByRole('button', { name: /Limpar Fase/i }).click();
+    await page.getByRole('button', { name: /^Sim$/i }).click();
+    await expect(page.getByText('Fase limpa!')).toBeVisible();
+    await expect(page.locator('.locked-overlay')).toBeVisible({ timeout: 4000 });
     await expect(page.locator('.canvas-inner .node')).toHaveCount(0);
   });
 

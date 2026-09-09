@@ -1024,8 +1024,10 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
           balloon={{ width: 320, height: 220, marginTop: -150 }}
           textStyle={{ padding: '20px 38px 52px', fontSize: 15 }}
           nextPrefix="Entendido! Próxima: "
-          onMenu={() => { clearSession(); setShowImpossibleScreen(false); forceLevelId != null ? onBack() : setTela('MENU'); }}
-          onNext={next => { clearSession(); setShowImpossibleScreen(false); loadLevel(next); }}
+          onMenu={() => { forceLevelId != null ? onBack() : setTela('MENU'); }}
+          onNext={next => loadLevel(next)}
+          onExport={handleExportSession}
+          onAccessBoard={() => setShowImpossibleScreen(false)}
         />
       )}
 
@@ -1038,8 +1040,10 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
           balloon={{ width: 300, height: 210, marginTop: -140 }}
           textStyle={{ padding: '18px 36px 48px', fontSize: 17 }}
           nextPrefix="Próxima: "
-          onMenu={() => { clearSession(); setShowVictoryScreen(false); forceLevelId != null ? onBack() : setTela('MENU'); }}
-          onNext={next => { clearSession(); setShowVictoryScreen(false); loadLevel(next); }}
+          onMenu={() => { forceLevelId != null ? onBack() : setTela('MENU'); }}
+          onNext={next => loadLevel(next)}
+          onExport={handleExportSession}
+          onAccessBoard={() => setShowVictoryScreen(false)}
         />
       )}
     </div>

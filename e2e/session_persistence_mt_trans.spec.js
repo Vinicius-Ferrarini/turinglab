@@ -133,7 +133,7 @@ test.describe('MT Transdutora — persistência de sessão por fase', () => {
     await expect(page.locator('.canvas-inner .node')).toHaveCount(1, { timeout: 8000 });
   });
 
-  test('vencer a fase e clicar "Voltar ao Menu" limpa a sessão (reabre em branco)', async ({ page }) => {
+  test('vencer a fase NÃO limpa mais nada — "Acessar Tabuleiro"/"Limpar Fase" controlam isso (ADR 0012)', async ({ page }) => {
     await goToMTTrans(page);
     await openL2(page);
 
@@ -213,10 +213,35 @@ test.describe('MT Transdutora — persistência de sessão por fase', () => {
     await page.getByRole('button', { name: /Validar Transições/i }).click();
 
     await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toBeVisible({ timeout: 4000 });
-    await page.getByRole('button', { name: /Voltar ao Menu/i }).click();
+    await expect(page.getByRole('button', { name: /⬇ Exportar/i }).last()).toBeVisible();
+    await expect(page.getByRole('button', { name: /🎮 Acessar Tabuleiro/i })).toBeVisible();
 
+    // Clicar "Voltar ao Menu" SEM passar por "Acessar Tabuleiro" NÃO limpa
+    // nada — reabrir a mesma fase reabre a EndScreen de novo, com o grafo intacto.
+    await waitAutosave(page);
+    await page.getByRole('button', { name: /Voltar ao Menu/i }).click();
     await openL2(page);
-    await expect(page.locator('.canvas-inner .node')).toHaveCount(0, { timeout: 8000 });
+    await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(3);
+
+    // "🎮 Acessar Tabuleiro" fecha o overlay SEM navegar nem limpar.
+    await page.getByRole('button', { name: /🎮 Acessar Tabuleiro/i }).click();
+    await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toHaveCount(0);
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(3);
+    await expect(page.getByRole('button', { name: /Limpar Fase/i })).toBeVisible();
+
+    // Essa escolha persiste: reabrir a fase depois vai direto pro tabuleiro.
+    await waitAutosave(page);
+    await page.getByRole('button', { name: /⬅ Voltar/i }).click();
+    await openL2(page);
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(3, { timeout: 8000 });
+    await expect(page.getByRole('button', { name: /Voltar ao Menu/i })).toHaveCount(0);
+
+    // "🗑 Limpar Fase" (confirmação Sim) é a única coisa que de fato limpa.
+    await page.getByRole('button', { name: /Limpar Fase/i }).click();
+    await page.getByRole('button', { name: /^Sim$/i }).click();
+    await expect(page.getByText('Fase limpa!')).toBeVisible();
+    await expect(page.locator('.canvas-inner .node')).toHaveCount(0, { timeout: 4000 });
   });
 
 });

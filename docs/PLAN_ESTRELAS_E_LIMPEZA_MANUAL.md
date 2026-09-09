@@ -161,14 +161,35 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       1 warning novo de `exhaustive-deps` no AFD foi corrigido adicionando
       as deps faltantes, voltando aos 13 de sempre). `npm test`: 2087/2087.
 
-- [ ] **6. `EndScreen.jsx`: botões "⬇ Exportar" + "🎮 Acessar Tabuleiro"**
-      Novas props `onExport` (reaproveita o MESMO handler já passado pro
-      `GameHeader` — não duplicar lógica) e `onAccessBoard` (chama
+- [x] **6. `EndScreen.jsx`: botões "⬇ Exportar" + "🎮 Acessar Tabuleiro"** ✅
+      Novas props `onExport` (reaproveita o MESMO `handleExportSession` já
+      passado pro `GameHeader`) e `onAccessBoard` (chama
       `setShowVictoryScreen(false)`/`setShowImpossibleScreen(false)` conforme
-      a tela; não navega, não limpa nada). Ordem dos botões: Voltar ao Menu,
-      ⬇ Exportar, 🎮 Acessar Tabuleiro, Próxima. Remove a chamada automática
-      de `clearSession()` dos `onMenu`/`onNext` nos 4 orquestradores (CA5) —
-      a limpeza só acontece pelo "🗑 Limpar Fase" (item 5) agora.
+      a tela). Ordem: Voltar ao Menu, ⬇ Exportar, 🎮 Acessar Tabuleiro,
+      Próxima.
+      **Correção de um bug real encontrado nesta etapa**: o `onMenu`/`onNext`
+      ORIGINAIS (Fase A) já continham `setShowVictoryScreen(false)` embutido
+      — remover só o `clearSession()` e deixar esse reset não bastava:
+      clicar "Voltar ao Menu" continuaria zerando o flag de vitória
+      silenciosamente, violando o CA5 (reabrir a fase depois de só clicar
+      "Voltar ao Menu" tem que reabrir a `EndScreen` de novo). Corrigido
+      removendo TAMBÉM esse `setShowVictoryScreen(false)`/
+      `setShowImpossibleScreen(false)` do `onMenu` — ele só existe agora
+      dentro de `onAccessBoard`. `onNext` não precisa de reset manual algum:
+      `loadLevel(next)` já zera os flags como parte do reset em branco de
+      sempre, pro NOVO nível.
+      Também corrigidos os 4 testes E2E da Fase A ("vencer a fase e clicar
+      Voltar ao Menu limpa a sessão") que **testavam exatamente o
+      comportamento antigo, agora revogado** — reescritos pra verificar o
+      comportamento novo (CA5/CA7: Voltar ao Menu sem limpar, Acessar
+      Tabuleiro persiste a dispensa, Limpar Fase é a única limpeza de
+      verdade). Não é uma regressão silenciosa: é a ADR 0012 substituindo
+      exatamente essa parte da ADR 0011, com os testes atualizados pra
+      provar o novo contrato.
+      Testes: `npx eslint` nos 5 arquivos — 0 erros, 17 warnings (baseline
+      idêntico). `npm test`: 2087/2087. `npx playwright test`: **74/74
+      passando** (os 4 testes reescritos + todos os 70 restantes, incluindo
+      os 26 de export/import/persistência já existentes).
 
 - [ ] **7. E2E Playwright** — específico pra este conjunto de mudanças,
       arquivo novo (ex. `e2e/stars_export_and_clear_session.spec.js`),

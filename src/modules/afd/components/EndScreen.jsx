@@ -7,6 +7,16 @@ import imgBalaoFala          from '../../../assets/balao_fala_redondo.webp';
 
 export default function EndScreen({
   currentLevelId, nextLevel, message, balloon, textStyle, nextPrefix, onMenu, onNext,
+  // ADR 0012: onExport reaproveita o MESMO handler do GameHeader (exportar
+  // funciona igual, em qualquer um dos 2 lugares); onAccessBoard fecha este
+  // overlay SEM navegar nem limpar nada — necessário porque este overlay
+  // cobre o GameHeader por baixo (position:fixed;inset:0), e sem sair
+  // limpando automaticamente (ver ADR 0012), reabrir uma fase já
+  // vencida/impossível sempre reabre esta tela — sem este botão, o
+  // GameHeader (Exportar/Importar/Limpar) ficaria inacessível pra sempre
+  // nessas fases. Ambos opcionais — omitidos, os botões somem, sem quebrar
+  // quem ainda não os passa.
+  onExport, onAccessBoard,
 }) {
   // `nextLevel` (opcional) sobrepõe o cálculo via GAME_LEVELS — usado por módulos
   // com sua própria lista de fases (ex.: AP). Ausente ⇒ comportamento do AFD.
@@ -27,9 +37,21 @@ export default function EndScreen({
           </div>
         </div>
       </div>
-      <div style={{ display:'flex', gap:20, marginTop:36 }}>
+      <div style={{ display:'flex', gap:16, marginTop:36, flexWrap:'wrap', justifyContent:'center' }}>
         <button className="menu-btn" onClick={onMenu}
           style={{ padding:'14px 28px', fontSize:20 }}>Voltar ao Menu</button>
+        {onExport && (
+          <button className="menu-btn" onClick={onExport}
+            style={{ padding:'14px 22px', fontSize:16 }} title="Baixar o estado desta fase em .json">
+            ⬇ Exportar
+          </button>
+        )}
+        {onAccessBoard && (
+          <button className="menu-btn" onClick={onAccessBoard}
+            style={{ padding:'14px 22px', fontSize:16 }} title="Fechar e ver o tabuleiro desta fase">
+            🎮 Acessar Tabuleiro
+          </button>
+        )}
         {next && (
           <button className="menu-btn primary" onClick={() => onNext(next)}
             style={{ padding:'14px 28px', fontSize:20 }}>
