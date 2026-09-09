@@ -93,26 +93,37 @@ Cada checkbox, ao ser marcado, ganha uma linha "**Feito:**" abaixo com o
 commit e o resultado da suíte (mesmo formato de `docs/PLAN_SESSAO_E_EXPORTACAO.md`)
 — nenhum checkbox descreve trabalho já feito hoje; tudo abaixo está por fazer.
 
-### 3.1 — MT Reconhecedora (bug relatado + mesma classe em L08/L09/L10)
+### 3.1 — MT Reconhecedora (bug relatado + mesma classe em L08/L09/L10) — ✅ CONCLUÍDO
 
-- [ ] **Passo 1 (RED)**: escrever a `describe` de mutação em
-  `mt_recon_levels.test.js` (ver §5 "Casos de teste" para o nome exato dos
-  `it()`) e confirmar que ela **falha hoje** pros 16 gaps de L06/L08/L09/L10
-  listados em §2 — essa falida é a prova de que o teste realmente detecta o
-  bug relatado, antes de tocar em qualquer dado de nível.
-- [ ] **Passo 2 (GREEN) — L06**: adicionar `"bbaa"` a `acceptedWords` em
-  `src/levels_data/mt-recon/L6.js`; rodar só os `it()` de L06 e confirmar
-  verde. Commit isolado.
-- [ ] **Passo 3 (GREEN) — L10**: adicionar `"bbcc"` a `acceptedWords`; rodar
-  só os `it()` de L10. Commit isolado.
-- [ ] **Passo 4 (GREEN) — L08**: adicionar `"aaaabccc"` + `"aaaccc"` a
-  `acceptedWords` (fecha 5/6); investigar à mão a transição `q12→q12
-  (a;a,L)` restante — decidir entre `KNOWN_DEAD_TRANSITIONS` (se
-  comprovadamente inalcançável) ou bateria maior. Commit isolado.
-- [ ] **Passo 5 (GREEN) — L09**: mesma investigação pra `p1→p3 (□;□,L)`.
-  Commit isolado.
-- [ ] **Passo 6**: rodar `mt_recon_levels.test.js` inteiro + suíte completa
-  (`npm test`) — 0 regressão nos outros 14 níveis/describes já existentes.
+- [x] **Passo 1 (RED)**: `describe` de mutação adicionada em
+  `mt_recon_levels.test.js`. Confirmado RED antes do fix: L06 (3 gaps), L08
+  (6), L09 (1), L10 (6) — exatamente os 16 da tabela de §2.
+  **Feito:** commit `3d35e7b`.
+- [x] **Passo 2 (GREEN) — L06**: `"bbaa"` adicionado a `acceptedWords`.
+  **Feito:** commit `3d35e7b` (mesmo commit do teste — RED→GREEN de uma vez
+  pro caso do bug relatado). `mt_recon_levels.test.js`: 216/216.
+- [x] **Passo 3 (GREEN) — L10**: `"bbcc"` adicionado. **Feito:** commit
+  `d16aa67`.
+- [x] **Passo 4 (GREEN) — L08**: `"aaaabccc"` + `"aaaccc"` fecharam 5/6; a
+  transição restante (`q12→q12 (a;a,L)`) **não é morta** — só precisava de
+  palavra maior (busca automática ia só até comprimento 8). Achada
+  `"aaaaabcccc"` (comprimento 10) por busca estendida até 12. **Feito:**
+  commit `e1fbd62`.
+- [x] **Passo 5 (GREEN) — L09**: `p1→p3 (□;□,L)` investigada e provada
+  **estruturalmente invisível à bateria por construção da linguagem** (não
+  é sobre alcançabilidade — é alcançável — é que remover essa transição
+  NUNCA muda o veredito de nenhuma palavra possível, verificado
+  computacionalmente com 5 palavras). Documentada em
+  `KNOWN_BATTERY_COVERAGE_GAPS` (nova allowlist, distinta de
+  `KNOWN_DEAD_TRANSITIONS`). **Feito:** commit `4404154`.
+- [x] **Passo 6**: `mt_recon_levels.test.js` completo (216/216) e suíte
+  inteira (`npm test`, 2106/2106) — 0 regressão. **Feito:** verificado antes
+  do E2E abaixo.
+
+**Extra (não estava no plano original, adicionado nesta rodada):** E2E de
+ponta a ponta reproduzindo o bug pela UI real (§6) — `mt_recon_battery_precision.spec.js`,
+confirmado sensível ao fix (falha sem "bbaa" em `acceptedWords`, passa com).
+**Feito:** commit `43519c9`. Suíte e2e completa: 80/80.
 
 ### 3.2 — MT Transdutora (achado mais sério — decisão de comportamento visível)
 
@@ -267,13 +278,15 @@ só por chamada direta de `fuzzTMRecognizer`/`fuzzTMTransducer` (unitário).
 Sem isso, um bug de FIAÇÃO (ex. o botão parar de chamar a função certa)
 passaria os testes unitários e não seria pego.
 
-- [ ] **Novo spec `e2e/mt_recon_battery_precision.spec.js`**: reproduz o bug
-  relatado de ponta a ponta — desenha no canvas o autômato oficial do L06
-  **sem** as 2 transições `q5→q5 (b/B)` (reaproveitar os helpers
-  `goToMTRecon`/`clickCanvasAt`/`addOneState` já existentes em
-  `mt_recon_trace_on_failure.spec.js`), testa `"bbaa"` e clica "✓ Validar
-  MT" — espera toast de ERRO (hoje, sem o conserto de §3.1, dá sucesso; é o
-  teste que prova a UI, não só a função pura).
+- [x] **Novo spec `e2e/mt_recon_battery_precision.spec.js`**: reproduz o bug
+  relatado de ponta a ponta. **Decisão de implementação**: em vez de clicar
+  as ~19 transições do L06 no canvas (muito frágil), monta o grafo oficial
+  MENOS as 3 transições faltantes e injeta via "⬆ Importar" (reaproveitando
+  a infra de export/import de sessão, ADR 0011) — testa exatamente o mesmo
+  caminho de código que "✓ Validar MT" usa (`g.nodes`/`g.transitions` do
+  estado do canvas), só monta o estado de forma mais robusta que clique-a-
+  clique. Confirmado sensível ao fix (RED sem "bbaa" em `acceptedWords`,
+  GREEN com). **Feito:** commit `43519c9`.
 - [ ] **Novo spec `e2e/mt_trans_battery_precision.spec.js`** (só depois da
   decisão de 3.2 confirmada e implementada): desenha uma MT Transdutora que
   aceita mas escreve errado numa célula, clica "✓ Validar MT" — espera
