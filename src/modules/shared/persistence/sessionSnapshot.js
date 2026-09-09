@@ -14,7 +14,10 @@ export const APP_ID = 'turinglab';
 // Allowlist de campos por moduleKey — evita que o payload de um módulo "vaze"
 // campo de outro (ex.: linguagemTests só existe em mt-trans). Fail closed: um
 // campo fora da lista rejeita o snapshot inteiro, em vez de tentar adivinhar.
-const MODULE_PAYLOAD_KEYS = {
+// Exportado (não só usado internamente) pra permitir um teste de regressão
+// dedicado — ver "payload nunca inclui campo que alimenta
+// dangerouslySetInnerHTML" em sessionSnapshot.test.js.
+export const MODULE_PAYLOAD_KEYS = {
   'afd-p1':   ['nodes', 'transitions', 'testWords', 'isDrawingUnlocked', 'hintStage', 'showVictoryScreen', 'showImpossibleScreen', 'formal'],
   'ap':       ['nodes', 'transitions', 'testedWords', 'isDrawingUnlocked', 'hintStage', 'testMode', 'victory', 'formal'],
   'mt-recon': ['nodes', 'transitions', 'testedWords', 'isDrawingUnlocked', 'hintStage', 'testMode', 'victory', 'formal'],

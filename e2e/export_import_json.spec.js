@@ -131,4 +131,53 @@ test.describe('Exportar/Importar sessão (.json)', () => {
     await expect(page.locator('.canvas-inner .node')).toHaveCount(0);
   });
 
+  // ─── Hardening: arquivo importado é input hostil (ver CLAUDE.md) ───────────
+  test('importar um .json com HTML/script embutido numa palavra NUNCA executa — vira texto literal', async ({ page }) => {
+    await goToAFD1(page);
+    await openLevel(page, 0); // L05
+    await unlockBoard(page); // testWords = [{ word: 'a', status: 'shortest' }]
+
+    // Marcador global que só ficaria `true` se o payload malicioso fosse
+    // interpretado como HTML/JS de verdade (em vez de texto escapado pelo
+    // React) — ex.: um <img onerror=...> real disparando.
+    await page.evaluate(() => { window.__xssFired = false; });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: /⬇ Exportar/i }).click();
+    const download = await downloadPromise;
+    const filePath = await download.path();
+    const original = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+
+    const XSS_PAYLOAD = '<img src=x onerror="window.__xssFired = true">';
+    const malicious = {
+      ...original,
+      payload: {
+        ...original.payload,
+        // Duas fontes de string plausíveis: uma palavra testada (chip de
+        // texto) e um campo da Descrição Formal (input controlado).
+        testWords: [{ word: XSS_PAYLOAD, status: 'wrong' }],
+        formal: { ...original.payload.formal, inputQ: XSS_PAYLOAD },
+      },
+    };
+    const maliciousFile = filePath.replace(/\.json$/, '_xss.json');
+    fs.writeFileSync(maliciousFile, JSON.stringify(malicious));
+
+    await page.locator('input[type="file"]').setInputFiles(maliciousFile);
+    await expect(page.locator('.toast-notification.success')).toContainText(/importada/i);
+
+    // Nada executou — o onerror do <img> forjado nunca disparou.
+    expect(await page.evaluate(() => window.__xssFired)).toBe(false);
+    // Nenhum <img> real foi criado a partir do payload malicioso.
+    await expect(page.locator('img[onerror]')).toHaveCount(0);
+
+    // O texto aparece LITERALMENTE na tela (com os `<`/`>` mesmo), prova de
+    // que o React escapou o conteúdo em vez de interpretá-lo como HTML.
+    await expect(page.locator('.words-hint-chip.reject')).toContainText(XSS_PAYLOAD);
+
+    // O campo da Descrição Formal (input controlado) também recebeu o texto
+    // bruto, sem nenhuma interpretação especial.
+    await page.locator('button.sidebar-toggle').click();
+    await expect(page.locator('.formal-sidebar-content .form-group input').first()).toHaveValue(XSS_PAYLOAD);
+  });
+
 });

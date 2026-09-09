@@ -47,6 +47,14 @@ export default function FooterDeck({
 
   // No modo Aula V2 mostra só o HUD do professor (sem cartas/sim)
   if (isLessonActive) {
+    // ⚠️ SEGURANÇA: stepText vem de currentLevel.guidedLesson — conteúdo
+    // ESTÁTICO escrito pelos devs (levels_data/*/L*.js), nunca do payload de
+    // sessão salva/importada (ver MODULE_PAYLOAD_KEYS em
+    // sessionSnapshot.js — guidedLesson/hint nunca fazem parte dessa
+    // allowlist). dangerouslySetInnerHTML pula o escape automático do
+    // React — NUNCA troque esta fonte por algo vindo de
+    // applyRestoredPayload/testWords/formal ou qualquer outro estado que
+    // um arquivo .json importado possa influenciar, ou isso vira XSS.
     const stepText = currentLevel?.guidedLesson?.[guidedLessonStep]?.text;
     return (
       <footer className="bottom-hand">
@@ -179,6 +187,14 @@ export default function FooterDeck({
         </div>
       )}
       {/* ── HUD Maurílio ── */}
+      {/* ⚠️ SEGURANÇA: currentProfMsg só pode vir de currentLevel.guidedLesson
+          (estático, ver aviso acima) ou de `professorMessage` — que por sua
+          vez só é setado em AFDPart1.jsx a partir de currentLevel.hint ou de
+          uma string fixa no código (handleProfessorClick), NUNCA a partir de
+          applyRestoredPayload nem de qualquer campo do payload de sessão
+          (professorMessage não está em MODULE_PAYLOAD_KEYS). Mesma regra do
+          bloco acima: NUNCA ligar isto a algo que um .json importado possa
+          controlar — dangerouslySetInnerHTML não escapa o conteúdo. */}
       {isDrawingUnlocked && (() => {
         const isInLesson     = guidedLessonStep !== null;
         const currentProfMsg = isInLesson

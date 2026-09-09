@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSnapshot, isValidSnapshot, SCHEMA_VERSION } from '../modules/shared/persistence/sessionSnapshot.js';
+import { buildSnapshot, isValidSnapshot, SCHEMA_VERSION, MODULE_PAYLOAD_KEYS } from '../modules/shared/persistence/sessionSnapshot.js';
 
 // ─── Fixtures por módulo (nomes de campo = estado real dos orquestradores,
 // ver §3 de docs/prompts/PROMPT_persistencia_sessao_e_exportacao.md) ──────────
@@ -310,6 +310,43 @@ describe('isValidSnapshot — stars', () => {
 
   it('SCHEMA_VERSION não muda por causa de stars (campo aditivo, sem quebrar compat)', () => {
     expect(SCHEMA_VERSION).toBe(1);
+  });
+
+});
+
+// ─── Suite 8: hardening contra XSS via dangerouslySetInnerHTML ───────────────
+// FooterDeck.jsx tem 2 pontos de dangerouslySetInnerHTML (stepText/
+// currentProfMsg) que SÓ podem ler de currentLevel.guidedLesson/hint
+// (conteúdo estático, escrito pelos devs) — nunca de nada que um arquivo
+// .json importado possa influenciar. Este teste é um "tripwire": se algum
+// dia alguém tentar adicionar um desses campos à allowlist de payload de
+// QUALQUER módulo (pra "persistir a mensagem do professor", por exemplo),
+// ele quebra na hora, com um motivo explícito — antes de virar um XSS de
+// verdade em produção. Não há bug pra corrigir aqui (a invariante já é
+// verdadeira hoje); é proteção preventiva contra regressão futura.
+describe('MODULE_PAYLOAD_KEYS — nunca inclui campo que alimenta dangerouslySetInnerHTML', () => {
+
+  // Nomes derivados de FooterDeck.jsx: stepText vem de
+  // currentLevel.guidedLesson[step].text; currentProfMsg vem do mesmo
+  // guidedLesson OU de `professorMessage` (AFDPart1.jsx, sempre setado a
+  // partir de currentLevel.hint ou de uma string fixa no código — nunca de
+  // applyRestoredPayload). Nenhum desses pode virar campo de payload salvo.
+  const DANGEROUS_FIELD_NAMES = [
+    'guidedLesson', 'hint', 'professorMessage', 'stepText', 'currentProfMsg', 'text',
+  ];
+
+  it('nenhum moduleKey conhecido tem um campo de payload com nome perigoso', () => {
+    for (const [moduleKey, fields] of Object.entries(MODULE_PAYLOAD_KEYS)) {
+      for (const dangerous of DANGEROUS_FIELD_NAMES) {
+        expect(
+          fields,
+          `${moduleKey}: "${dangerous}" nunca pode entrar no payload — alimentaria ` +
+          `dangerouslySetInnerHTML em FooterDeck.jsx sem escapar (risco de XSS armazenado ` +
+          `via arquivo .json importado). Ver o aviso de segurança nos 2 usos de ` +
+          `dangerouslySetInnerHTML em src/modules/afd/components/FooterDeck.jsx.`
+        ).not.toContain(dangerous);
+      }
+    }
   });
 
 });

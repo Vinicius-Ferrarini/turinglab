@@ -188,7 +188,15 @@ the Descrição Formal form, field by field) autosaves debounced (~500ms) to
   `URL.createObjectURL`/`<a download>`/`FileReader`) plus the size (5MB) and depth/array-size sanity
   checks applied to any imported file. Imported files are untrusted user input: only `JSON.parse`
   (never `eval`/`new Function`), size rejected before any read, and a failed check never applies
-  anything partially.
+  anything partially. String *content* inside the payload (a node label, a tested word, a formal-field
+  value) is never validated beyond "is it the right container type" — the actual XSS defense is that
+  nothing from the payload ever reaches `dangerouslySetInnerHTML` (there are exactly 2 uses in the
+  whole app, both in `FooterDeck.jsx`, both hard-commented and reading only `currentLevel.guidedLesson`/
+  `.hint` — static, developer-authored level content, never session/import state) — everything else
+  renders through plain JSX `{...}`, which React escapes unconditionally. `sessionSnapshot.test.js`
+  has a tripwire test asserting no payload-field allowlist ever gains one of those sink field names,
+  and `e2e/export_import_json.spec.js` has an end-to-end test importing a `<img onerror=...>` payload
+  and asserting it never fires and renders as literal text. Keep both green if you touch either sink.
 - Each of the 4 orchestrators exposes an `applyRestoredPayload(restored)`, used by the "⬆ Importar"
   handler in all 4. Only **AFD's** `loadLevel` also calls it for its own hydration path — AP/MT-Recon/
   MT-Trans keep their own inline restore logic inside `loadLevel` (pre-existing, already covered by
