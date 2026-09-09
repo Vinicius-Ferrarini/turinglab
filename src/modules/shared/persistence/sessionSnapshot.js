@@ -23,8 +23,15 @@ const MODULE_PAYLOAD_KEYS = {
 
 export const KNOWN_MODULE_KEYS = Object.keys(MODULE_PAYLOAD_KEYS);
 
-/** Monta o envelope { schemaVersion, app, moduleKey, levelId, levelLabel?, savedAt, payload }. */
-export function buildSnapshot(moduleKey, levelId, payload, levelLabel = null) {
+/**
+ * Monta o envelope { schemaVersion, app, moduleKey, levelId, levelLabel?,
+ * stars?, savedAt, payload }. `stars` (ADR 0012) é opcional e só costuma ser
+ * preenchido ao EXPORTAR (0 a 3) — o autosave em localStorage não precisa
+ * dele (estrelas já sobrevivem a F5 pelo mecanismo próprio de
+ * turinglab_progress). `stars: 0` é um valor válido, tratado como
+ * "informado" — só `undefined`/`null` deixam o campo de fora do objeto.
+ */
+export function buildSnapshot(moduleKey, levelId, payload, levelLabel = null, stars = undefined) {
   const snapshot = {
     schemaVersion: SCHEMA_VERSION,
     app: APP_ID,
@@ -34,6 +41,7 @@ export function buildSnapshot(moduleKey, levelId, payload, levelLabel = null) {
     payload,
   };
   if (levelLabel != null) snapshot.levelLabel = levelLabel;
+  if (stars != null) snapshot.stars = stars;
   return snapshot;
 }
 
@@ -74,6 +82,16 @@ export function isValidSnapshot(raw, expectedModuleKey, expectedLevelId) {
   }
   if (raw.payload.transitions !== undefined && !Array.isArray(raw.payload.transitions)) {
     return { ok: false, reason: 'bad_payload_shape' };
+  }
+  // stars (ADR 0012) é opcional — ausente é válido (arquivo exportado antes
+  // desta mudança, ou autosave, que nunca o preenche). Quando presente, tem
+  // que ser um inteiro 0-3 (0-3 é o máximo global de estrelas de qualquer
+  // fase no app — níveis com starsMax menor, ex. impossible/wordOnly, são
+  // clampados na UI, não aqui).
+  if (raw.stars !== undefined) {
+    if (typeof raw.stars !== 'number' || !Number.isInteger(raw.stars) || raw.stars < 0 || raw.stars > 3) {
+      return { ok: false, reason: 'bad_stars' };
+    }
   }
   return { ok: true };
 }

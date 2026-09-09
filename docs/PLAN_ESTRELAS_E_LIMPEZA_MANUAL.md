@@ -86,20 +86,18 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       — já redigida nesta rodada de planejamento, ver arquivo. Nota de
       atualização adicionada na ADR 0011.
 
-- [ ] **1. `sessionSnapshot.js`: campo `stars` opcional no envelope + testes**
-      TDD — escrever antes:
-      - `buildSnapshot(moduleKey, levelId, payload, levelLabel, stars)`: com
-        `stars` informado, aparece no envelope; sem informar (undefined),
-        continua ausente do objeto (mesmo padrão já usado por `levelLabel`).
-      - `isValidSnapshot`: `stars` ausente → válido, sem afetar o resto da
-        validação (CA4). `stars` presente e é inteiro 0-3 → válido. `stars`
-        presente mas inválido (string, negativo, > 3, float não-inteiro,
-        `NaN`) → `{ ok:false, reason:'bad_stars' }`, nunca lança.
-      - Roundtrip: `buildSnapshot` com `stars` → `JSON.stringify`/`parse` →
-        `isValidSnapshot` continua `ok:true` com o mesmo valor.
-      - `SCHEMA_VERSION` **não muda** — teste explícito garantindo que um
-        envelope `schemaVersion: 1` sem `stars` nenhum ainda passa
-        (documenta a decisão da ADR 0012 de não bumpar versão).
+- [x] **1. `sessionSnapshot.js`: campo `stars` opcional no envelope + testes** ✅
+      TDD: 21 testes novos em `sessionSnapshot.test.js` (Suites 6-7),
+      confirmados falhando (7 falhas, `stars` ainda undefined) antes de
+      implementar. `buildSnapshot(moduleKey, levelId, payload, levelLabel,
+      stars)` — 5º parâmetro opcional; `stars: 0` é tratado como "informado"
+      (só `undefined`/`null` deixam o campo de fora, mesmo padrão de
+      `levelLabel`). `isValidSnapshot` aceita `stars` ausente (CA4, arquivo
+      exportado antes desta mudança) e valida inteiro 0-3 quando presente —
+      string/NaN/negativo/>3/float rejeitados com `reason:'bad_stars'`, nunca
+      lança. `SCHEMA_VERSION` continua 1 (teste explícito).
+      Testes: `npx vitest run sessionSnapshot.test.js` 28/28. `npm test`
+      completo: **2087/2087 passando** (26 arquivos) — sem regressão.
 
 - [ ] **2. `App.jsx`: `updateProgress(moduleId, stars, extras, logTelemetry)`**
       TDD não aplicável da forma usual — `App.jsx` não tem suíte Vitest

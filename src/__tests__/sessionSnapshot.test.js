@@ -231,3 +231,85 @@ describe('isValidSnapshot — fixture grande de MT Transdutora (histórico longo
     expect(roundtripped.payload.linguagemTests[149]).toEqual(bigLinguagemTests[149]);
   });
 });
+
+// ─── Suite 7: campo `stars` opcional no envelope (ADR 0012) ──────────────────
+describe('buildSnapshot — stars', () => {
+
+  it('com stars informado, aparece no envelope', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload, 'L12', 2);
+    expect(snap.stars).toBe(2);
+  });
+
+  it('sem stars informado (autosave normal), continua ausente do objeto', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload);
+    expect(snap).not.toHaveProperty('stars');
+    expect(Object.keys(snap)).not.toContain('stars');
+  });
+
+  it('stars = 0 é um valor válido (não deve ser tratado como "ausente")', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload, 'L12', 0);
+    expect(snap.stars).toBe(0);
+    expect(snap).toHaveProperty('stars');
+  });
+
+});
+
+describe('isValidSnapshot — stars', () => {
+
+  it('stars ausente → snapshot continua válido (arquivo exportado antes desta mudança)', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload);
+    const res = isValidSnapshot(snap, 'afd-p1', 12);
+    expect(res.ok).toBe(true);
+  });
+
+  it('stars presente e inteiro 0-3 → válido', () => {
+    for (const stars of [0, 1, 2, 3]) {
+      const snap = buildSnapshot('afd-p1', 12, afdPayload, null, stars);
+      expect(isValidSnapshot(snap, 'afd-p1', 12)).toEqual({ ok: true });
+    }
+  });
+
+  it('stars negativo → ok:false, bad_stars', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload, null, -1);
+    const res = isValidSnapshot(snap, 'afd-p1', 12);
+    expect(res.ok).toBe(false);
+    expect(res.reason).toBe('bad_stars');
+  });
+
+  it('stars > 3 → ok:false, bad_stars', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload, null, 4);
+    const res = isValidSnapshot(snap, 'afd-p1', 12);
+    expect(res.ok).toBe(false);
+    expect(res.reason).toBe('bad_stars');
+  });
+
+  it('stars não-inteiro (float) → ok:false, bad_stars', () => {
+    const snap = buildSnapshot('afd-p1', 12, afdPayload, null, 1.5);
+    const res = isValidSnapshot(snap, 'afd-p1', 12);
+    expect(res.ok).toBe(false);
+    expect(res.reason).toBe('bad_stars');
+  });
+
+  it('stars como string ou NaN → ok:false, bad_stars, nunca lança', () => {
+    const snapStr = { ...buildSnapshot('afd-p1', 12, afdPayload), stars: '3' };
+    expect(() => isValidSnapshot(snapStr, 'afd-p1', 12)).not.toThrow();
+    expect(isValidSnapshot(snapStr, 'afd-p1', 12).reason).toBe('bad_stars');
+
+    const snapNaN = { ...buildSnapshot('afd-p1', 12, afdPayload), stars: NaN };
+    expect(() => isValidSnapshot(snapNaN, 'afd-p1', 12)).not.toThrow();
+    expect(isValidSnapshot(snapNaN, 'afd-p1', 12).reason).toBe('bad_stars');
+  });
+
+  it('roundtrip: stars sobrevive a stringify/parse sem alteração', () => {
+    const snap = buildSnapshot('mt-trans', 23, mtTransPayload, 'L23', 3);
+    const roundtripped = JSON.parse(JSON.stringify(snap));
+    const res = isValidSnapshot(roundtripped, 'mt-trans', 23);
+    expect(res.ok).toBe(true);
+    expect(roundtripped.stars).toBe(3);
+  });
+
+  it('SCHEMA_VERSION não muda por causa de stars (campo aditivo, sem quebrar compat)', () => {
+    expect(SCHEMA_VERSION).toBe(1);
+  });
+
+});
