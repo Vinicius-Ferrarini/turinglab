@@ -331,7 +331,14 @@ mesma cultura de registrar decisões que já existe no repo (ver ADR 0007).
       serialização/validação de arquivo importado (schema errado, JSON
       corrompido, `moduleKey` de outro módulo, `levelId` diferente do nível
       atualmente aberto — defina e teste o comportamento: bloquear com toast
-      de erro claro, nunca aplicar parcialmente).
+      de erro claro, nunca aplicar parcialmente). **Higiene de segurança
+      obrigatória, por ser input de arquivo não confiável do usuário**: usar
+      só `JSON.parse` (nunca `eval`/`new Function`); rejeitar antes de
+      parsear qualquer arquivo acima de um limite de tamanho razoável (ex.:
+      2–5 MB — folgado o bastante para os níveis grandes de MT do item 1,
+      mas descarta arquivo malicioso/corrompido gigante sem travar a aba);
+      cobrir os dois casos (arquivo grande demais, JSON tecnicamente válido
+      mas com profundidade/tamanho de array absurdo) com teste unitário.
 
 - [ ] **8. UI de exportar/importar** — botão novo no `GameHeader.jsx`
       (`src/modules/afd/components/GameHeader.jsx` — repare que o slot
