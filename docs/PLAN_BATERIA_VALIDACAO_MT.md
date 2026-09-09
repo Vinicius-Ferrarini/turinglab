@@ -125,35 +125,49 @@ ponta a ponta reproduzindo o bug pela UI real (§6) — `mt_recon_battery_precis
 confirmado sensível ao fix (falha sem "bbaa" em `acceptedWords`, passa com).
 **Feito:** commit `43519c9`. Suíte e2e completa: 80/80.
 
-### 3.2 — MT Transdutora (achado mais sério — decisão de comportamento visível)
+### 3.2 — MT Transdutora (achado mais sério — decisão de comportamento visível) — ✅ CONCLUÍDO (núcleo) — ⚠️ 1 item aberto (ver abaixo)
 
-Isto muda o que "✓ Validar MT" garante, então é uma decisão de **produto**,
-não só de implementação — **preciso da confirmação do usuário antes de
-codificar**, porque pode fazer autômatos que hoje "passam" (aceitos com fita
-errada) passarem a falhar depois do conserto:
+- [x] **Decisão**: confirmada pelo usuário — `validate()`/`fuzzTMTransducer`
+  passa a comparar a fita final de cada `testWord` com `level.validate(word)`
+  **além** de checar estado final.
+- [x] **Passo 1 (RED)**: fixture "aceita mas escreve errado" em
+  `mt_trans_levels.test.js` — confirmado `ok:true` (bug reproduzido) antes
+  do fix.
+- [x] **Passo 2 (GREEN)**: `fuzzTMTransducer` (`tmAlgorithms.js`) agora
+  extrai a fita e compara com `level.validate(word)`; motivo novo
+  `'wrong-output'` com `{expected, got}`. Achado curioso: o comentário da
+  função já dizia fazer essa comparação — nunca tinha sido implementado
+  (comentário aspiracional). **Feito:** commit `75abf2e`.
+- [x] Mensagem de erro: o fallback do ternário em `MTPart1.jsx` **já
+  esperava** `res.expected`/`res.got` (código morto até agora, nunca
+  alcançável) — só reescrevi o texto, nenhuma lógica nova de UI. **Feito:**
+  commit `75abf2e`.
+- [x] **Passo 3**: `describe` de mutação de `write` em `mt_trans_levels.test.js`.
+  **Achado importante, não previsto no plano original**: mesmo depois do
+  fix, 14 dos 21 níveis (as MTs de tabela — multiplicação L16-L23, cifra
+  L11, duplicação L06/L10, soma L24) ainda têm células cujo `write` errado
+  não muda a saída das `testWords` de hoje (combinação de dígito/carry não
+  exercitada). Implementado como **RATCHET** (`KNOWN_WRITE_GAP_CEILING`,
+  não allowlist silenciosa) — bloqueia regressão nova, documenta o estado
+  atual sem fingir estar tudo coberto. Fechar de vez é trabalho de
+  CONTEÚDO (expandir `testWords` nível a nível), não de código — **fica
+  registrado como item em aberto** (ver "Pendência" abaixo), não escondido.
+  **Feito:** commit `75abf2e`.
+- [x] **Passo 4**: suíte completa — nenhum dos 21 gabaritos oficiais
+  precisou de correção (já produziam saída certa; só o validador do ALUNO
+  não conferia isso). **Feito:** `npm test` 2129/2129.
 
-- [ ] **Decisão (bloqueia todo o resto de 3.2)**: `validate()`
-  (`MTPart1.jsx:438`) deve passar a comparar a fita final de cada `testWord`
-  contra `level.validate(word)` (via `extractTapeOutput`, já existe e já é
-  usado na aba "✏ Desenho") **além** de checar estado final.
-- [ ] **Passo 1 (RED)**: escrever o teste unitário com a MT-fixture "aceita
-  mas escreve errado" (§5) contra a função de validação ATUAL
-  (`fuzzTMTransducer`) — confirmar que ele **passa (`ok:true`) hoje**, ou
-  seja, prova a falha de detecção antes de mexer no código.
-- [ ] **Passo 2 (GREEN)**: implementar a checagem de saída (nova função ou
-  variante de `fuzzTMTransducer` — decidir nome ao codificar, ex.
-  `fuzzTMTransducer` passa a checar as duas coisas, já que hoje nada externo
-  depende dele checar só o estado final) — rodar o teste do Passo 1 e
-  confirmar que agora falha (`ok:false`) pra fixture errada.
-- [ ] Mensagem de erro nova pro caso "aceitou mas escreveu errado" (reusar o
-  formato `{expected, got}` já usado em `validateStudentPda` do AP).
-- [ ] **Passo 3 (RED→GREEN)**: escrever a `describe` de mutação de `write`
-  em `mt_trans_levels.test.js` (§5) — confirma RED (todos os 21 níveis
-  falham) antes, depois roda contra a validação nova.
-- [ ] **Passo 4**: rodar a suíte completa — é bem provável que ALGUM nível
-  real tenha uma célula δ com erro que hoje passa escondido; se acontecer,
-  corrigir o **gabarito** daquele nível (nunca abaixar a régua da validação
-  pra fazer o teste passar).
+**Extra (mesmo padrão do 3.1):** E2E de ponta a ponta —
+`mt_trans_battery_precision.spec.js`, grafo real do L01 com 1 write
+mutado isolado, confirmado sensível ao fix. **Feito:** commit `782d7b8`.
+Suíte e2e completa: 81/81.
+
+**Pendência registrada (não fechada nesta rodada):** reduzir o teto do
+ratchet (`KNOWN_WRITE_GAP_CEILING`) nos 14 níveis afetados exige expandir
+`testWords` pra exercitar toda combinação de dígito/carry das tabelas —
+trabalho de conteúdo por nível (potencialmente grande em L11/L17-L23),
+não decidido/priorizado ainda. Ver §4 de "Decisão" — mesma técnica
+BFS+oráculo recomendada ali serviria aqui.
 
 ### 3.3 — Fora de escopo desta rodada (registrado, não abandonado)
 
