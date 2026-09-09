@@ -46,7 +46,10 @@ const MT_RECON_L8 = {
     "aabc",
     "aaabbc",
     "aaabcc",
-    "aaaabbcc"
+    "aaaabbcc",
+    "aaaabccc",
+    "aaaccc",
+    "aaaaabcccc"
   ],
   "rejectedWords": [
     "",
