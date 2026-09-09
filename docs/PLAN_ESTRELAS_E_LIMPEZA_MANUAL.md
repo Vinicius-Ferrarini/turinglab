@@ -111,15 +111,19 @@ escolha de dispensar a tela de fim persiste (é parte do estado salvo).
       Testes: `npx eslint src/App.jsx` limpo. `npm test`: 2087/2087 (sem
       mudança nesta etapa — item sem lógica pura nova).
 
-- [ ] **3. Export/Import nos 4 orquestradores: ligar `stars`**
-      - `handleExportSession`: ler `progress?.[<chave-de-estrelas-do-módulo>]?.stars ?? 0`
-        (a chave de estrelas é DIFERENTE do `moduleKey` da sessão — ex.: AFD
-        usa `currentLevel.id` cru, AP usa `` `ap-${level.id}` `` etc.; não
-        confundir os dois namespaces) e passar pro `buildSnapshot`.
-      - `handleImportSessionFile`: se `res.snapshot.stars != null`, chamar
-        `updateProgress(<chave>, res.snapshot.stars, {}, false)` (CA2/CA3).
-      - Testes: cobertos via Playwright no item 7 (mesma razão do item 2 —
-        é fiação de UI/estado React, não lógica pura isolável).
+- [x] **3. Export/Import nos 4 orquestradores: ligar `stars`** ✅
+      `handleExportSession` de cada módulo agora lê a chave de progresso
+      certa (`currentLevel.id` no AFD; `` `ap-${level.id}` ``,
+      `` `mt-recon-${level.id}` ``, `` `mt-trans-${level.id}` `` nos outros
+      3 — confirmadas DIFERENTES do `moduleKey` da sessão) e passa pro
+      `buildSnapshot`. `handleImportSessionFile` chama
+      `updateProgress(<chave>, res.snapshot.stars, {}, false)` quando
+      `stars` vem no arquivo (CA2/CA3) — `false` = sem telemetria de
+      `fim_fase` falsa (item 2).
+      Testes: cobertos via Playwright no item 7 (fiação de UI/estado React,
+      mesma razão do item 2). `npx eslint` nos 4 orquestradores: **0 erros,
+      17 warnings** — idêntico à soma dos 4 baselines individuais (13+0+2+2)
+      já registrados na Fase B, nenhum novo. `npm test`: 2087/2087.
 
 - [ ] **4. `resetPhaseToBlank()` por orquestrador**
       Extrai a lógica de "estado em branco" que hoje só existe dentro do

@@ -209,7 +209,10 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
   // ── Exportar/Importar sessão em .json (Feature B — ver ADR 0011) ───────────
   const handleExportSession = useCallback(() => {
     if (!level) return;
-    const snapshot = buildSnapshot('mt-recon', level.id, sessionPayload, level.label);
+    // Estrelas (ADR 0012): chave de progresso é `mt-recon-<id>`, DIFERENTE
+    // do moduleKey da sessão ('mt-recon') — não confundir os dois namespaces.
+    const stars = progress?.[`mt-recon-${level.id}`]?.stars ?? 0;
+    const snapshot = buildSnapshot('mt-recon', level.id, sessionPayload, level.label, stars);
     const ok = downloadSnapshotFile(snapshot, buildExportFilename('mt-recon', level.id));
     if (ok) {
       showToast?.('Fase exportada em .json!', 'success');
@@ -217,7 +220,7 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
     } else {
       showToast?.('Não foi possível exportar a fase.', 'error');
     }
-  }, [level, sessionPayload, showToast]);
+  }, [level, sessionPayload, progress, showToast]);
 
   const handleImportSessionFile = useCallback(async (file) => {
     if (!level) return;
@@ -227,9 +230,10 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
       return;
     }
     applyRestoredPayload(res.snapshot.payload);
+    if (res.snapshot.stars != null) updateProgress?.(`mt-recon-${level.id}`, res.snapshot.stars, {}, false);
     showToast?.('Fase importada com sucesso!', 'success');
     if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'mt-recon', nivel_id: level.id });
-  }, [level, applyRestoredPayload, showToast]);
+  }, [level, applyRestoredPayload, updateProgress, showToast]);
 
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
   const applyStep = useCallback((st) => {

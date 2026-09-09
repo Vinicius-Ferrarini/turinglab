@@ -336,7 +336,11 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
   // ── Exportar/Importar sessão em .json (Feature B — ver ADR 0011) ───────────
   const handleExportSession = useCallback(() => {
     if (!currentLevel) return;
-    const snapshot = buildSnapshot('afd-p1', currentLevel.id, sessionPayload, currentLevel.label);
+    // Estrelas (ADR 0012): chave de progresso do AFD é o id cru do nível,
+    // DIFERENTE do moduleKey da sessão ('afd-p1') — não confundir os dois
+    // namespaces (ver §3 do plano).
+    const stars = progress?.[currentLevel.id]?.stars ?? 0;
+    const snapshot = buildSnapshot('afd-p1', currentLevel.id, sessionPayload, currentLevel.label, stars);
     const ok = downloadSnapshotFile(snapshot, buildExportFilename('afd-p1', currentLevel.id));
     if (ok) {
       showToast('Fase exportada em .json!', 'success');
@@ -344,7 +348,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     } else {
       showToast('Não foi possível exportar a fase.', 'error');
     }
-  }, [currentLevel, sessionPayload, showToast]);
+  }, [currentLevel, sessionPayload, progress, showToast]);
 
   const handleImportSessionFile = useCallback(async (file) => {
     if (!currentLevel) return;
@@ -354,9 +358,12 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
       return;
     }
     applyRestoredPayload(res.snapshot.payload, currentLevel);
+    // Restaura as estrelas do arquivo (nunca regride — updateProgress já
+    // garante isso) sem gerar telemetria de fim_fase falsa (logTelemetry=false).
+    if (res.snapshot.stars != null) updateProgress(currentLevel.id, res.snapshot.stars, {}, false);
     showToast('Fase importada com sucesso!', 'success');
     if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'afd-p1', nivel_id: currentLevel.id });
-  }, [currentLevel, applyRestoredPayload, showToast]);
+  }, [currentLevel, applyRestoredPayload, updateProgress, showToast]);
 
   // ── Carrega fase ──────────────────────────────────────────────────────────
   const loadLevel = useCallback((level) => {
