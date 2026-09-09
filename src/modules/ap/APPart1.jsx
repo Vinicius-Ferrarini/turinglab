@@ -30,8 +30,12 @@ import { DIFF_COLOR } from '../../levels';
 import GameHeader from '../afd/components/GameHeader';
 import useToast from '../afd/hooks/useToast';
 import usePhaseTelemetry from '../afd/hooks/usePhaseTelemetry';
-import { logEvent } from '../../services/telemetry';
+import { logEvent, hasConsent } from '../../services/telemetry';
 import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
+import { buildSnapshot } from '../shared/persistence/sessionSnapshot.js';
+import {
+  buildExportFilename, downloadSnapshotFile, readImportedFile, describeImportError,
+} from '../shared/persistence/exportImportFile.js';
 
 export default function APPart1({ onBack, progress, updateProgress, forceLevelId, forceLevelLabel, onForcedPrev, onForcedNext, forceLabelColor }) {
   // ── Toast (local, ignora o showToast no-op do App.jsx) ─
@@ -148,6 +152,46 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
   const { clearSession } = useLevelSessionPersistence({
     moduleKey: 'ap', levelId: level?.id ?? null, payload: sessionPayload, levelLabel: level?.label,
   });
+
+  // Aplica um payload restaurado (autosave OU arquivo importado — mesmo
+  // shape) ao estado do orquestrador. Usado por loadLevel (ao entrar na
+  // fase) e por handleImportSessionFile (fase já aberta na tela).
+  const applyRestoredPayload = useCallback((restored) => {
+    g.reset({ nodes: restored.nodes ?? [], transitions: restored.transitions ?? [] });
+    setSim(null); setSimHighlight({ nodeId: null, type: null, tIdx: null });
+    setMode('IDLE'); setConnectingSource(null);
+    setVictory(!!restored.victory);
+    setTestedWords(restored.testedWords ?? []);
+    setTestMode(restored.testMode ?? 'LANGUAGE');
+    wordleGame.setHintStage(restored.hintStage ?? 0);
+    setIsDrawingUnlocked(!!restored.isDrawingUnlocked);
+    setFormalSnapshot(restored.formal ?? null);
+  }, [g, wordleGame]);
+
+  // ── Exportar/Importar sessão em .json (Feature B — ver ADR 0011) ───────────
+  const handleExportSession = useCallback(() => {
+    if (!level) return;
+    const snapshot = buildSnapshot('ap', level.id, sessionPayload, level.label);
+    const ok = downloadSnapshotFile(snapshot, buildExportFilename('ap', level.id));
+    if (ok) {
+      showToast?.('Fase exportada em .json!', 'success');
+      if (hasConsent()) logEvent({ tipo_evento: 'exportar_fase', modulo: 'ap', nivel_id: level.id });
+    } else {
+      showToast?.('Não foi possível exportar a fase.', 'error');
+    }
+  }, [level, sessionPayload, showToast]);
+
+  const handleImportSessionFile = useCallback(async (file) => {
+    if (!level) return;
+    const res = await readImportedFile(file, 'ap', level.id);
+    if (!res.ok) {
+      showToast?.(describeImportError(res.reason), 'error');
+      return;
+    }
+    applyRestoredPayload(res.snapshot.payload);
+    showToast?.('Fase importada com sucesso!', 'success');
+    if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'ap', nivel_id: level.id });
+  }, [level, applyRestoredPayload, showToast]);
 
   // ── Modo Aula: iniciar / sair / navegar (narração + painel formal sem efeito) ─
   const applyStep = useCallback((st) => {
@@ -616,6 +660,8 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
         onCloseLesson={finishLesson}
         showSizeHint={!isDrawingUnlocked && (!effectiveShortestWord || wordleGame.hintStage < 2)}
         onSizeHint={effectiveShortestWord ? handleWordleHint : handleSizeHint}
+        onExportSession={handleExportSession}
+        onImportSessionFile={handleImportSessionFile}
       />
 
       <div className="workspace">

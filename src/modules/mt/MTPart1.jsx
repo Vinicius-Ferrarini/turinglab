@@ -25,7 +25,11 @@ import { fuzzTMTransducer, simulateTM, extractTapeOutput, BLANK } from './utils/
 import { validateMTFormalFields, validateMTFormalTransitions } from './utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
-import { logEvent } from '../../services/telemetry';
+import { logEvent, hasConsent } from '../../services/telemetry';
+import { buildSnapshot } from '../shared/persistence/sessionSnapshot.js';
+import {
+  buildExportFilename, downloadSnapshotFile, readImportedFile, describeImportError,
+} from '../shared/persistence/exportImportFile.js';
 import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
 
 // Estado inicial vazio do formulário da descrição formal (7-tupla)
@@ -137,6 +141,47 @@ export default function MTPart1({ onBack, progress, updateProgress,
   const { clearSession } = useLevelSessionPersistence({
     moduleKey: 'mt-trans', levelId: level?.id ?? null, payload: sessionPayload, levelLabel: level?.label,
   });
+
+  // Aplica um payload restaurado (autosave OU arquivo importado — mesmo
+  // shape) ao estado do orquestrador. Usado por loadLevel (ao entrar na
+  // fase) e por handleImportSessionFile (fase já aberta na tela).
+  const applyRestoredPayload = useCallback((restored) => {
+    g.reset({ nodes: restored.nodes ?? [], transitions: restored.transitions ?? [] });
+    setMode('IDLE'); setConnectingSource(null);
+    setVictory(!!restored.victory);
+    setLinguagemTests(restored.linguagemTests ?? []);
+    setDesenhoTests(restored.desenhoTests ?? []);
+    setActiveTab(restored.activeTab ?? 'linguagem');
+    setFormalAnswers(restored.formal?.formalAnswers ?? EMPTY_FORMAL);
+    setFormalMode(false);
+    setFormalElementsValid(!!restored.formal?.formalElementsValid);
+    setFieldErrors({}); setCellErrors({});
+  }, [g]);
+
+  // ── Exportar/Importar sessão em .json (Feature B — ver ADR 0011) ───────────
+  const handleExportSession = useCallback(() => {
+    if (!level) return;
+    const snapshot = buildSnapshot('mt-trans', level.id, sessionPayload, level.label);
+    const ok = downloadSnapshotFile(snapshot, buildExportFilename('mt-trans', level.id));
+    if (ok) {
+      showToast?.('Fase exportada em .json!', 'success');
+      if (hasConsent()) logEvent({ tipo_evento: 'exportar_fase', modulo: 'mt-trans', nivel_id: level.id });
+    } else {
+      showToast?.('Não foi possível exportar a fase.', 'error');
+    }
+  }, [level, sessionPayload, showToast]);
+
+  const handleImportSessionFile = useCallback(async (file) => {
+    if (!level) return;
+    const res = await readImportedFile(file, 'mt-trans', level.id);
+    if (!res.ok) {
+      showToast?.(describeImportError(res.reason), 'error');
+      return;
+    }
+    applyRestoredPayload(res.snapshot.payload);
+    showToast?.('Fase importada com sucesso!', 'success');
+    if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'mt-trans', nivel_id: level.id });
+  }, [level, applyRestoredPayload, showToast]);
 
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
   const applyStep = useCallback((st) => {
@@ -635,6 +680,8 @@ export default function MTPart1({ onBack, progress, updateProgress,
         lessonDisabled={!lesson.hasLesson}
         onStartLesson={startLesson}
         onCloseLesson={finishLesson}
+        onExportSession={handleExportSession}
+        onImportSessionFile={handleImportSessionFile}
       />
 
       <div className="workspace">

@@ -78,6 +78,28 @@ export function parseImportedSnapshot(text, expectedModuleKey, expectedLevelId) 
   return { ok: true, snapshot: raw };
 }
 
+const IMPORT_ERROR_MESSAGES = {
+  file_too_large: 'Arquivo grande demais (o limite é 5MB).',
+  invalid_json: 'Arquivo corrompido — não é um .json válido.',
+  too_deep: 'Arquivo com estrutura inválida (aninhamento excessivo).',
+  array_too_large: 'Arquivo com estrutura inválida (lista de dados excessiva).',
+  not_an_object: 'Arquivo não é uma sessão válida do TuringLab.',
+  bad_payload_shape: 'Arquivo não é uma sessão válida do TuringLab.',
+  unexpected_payload_field: 'Arquivo não é uma sessão válida do TuringLab.',
+  unknown_module_key: 'Arquivo não é uma sessão válida do TuringLab.',
+  schema_version_mismatch: 'Arquivo de uma versão incompatível do TuringLab.',
+  bad_app: 'Arquivo não é uma sessão do TuringLab.',
+  module_mismatch: 'Este arquivo é de outro módulo — importe na tela do módulo correto.',
+  level_mismatch: 'Este arquivo é de outra fase — abra a mesma fase antes de importar.',
+  no_file: 'Nenhum arquivo selecionado.',
+  read_error: 'Não foi possível ler o arquivo.',
+};
+
+/** Mensagem de toast amigável para cada `reason` de rejeição — nunca lança. */
+export function describeImportError(reason) {
+  return IMPORT_ERROR_MESSAGES[reason] ?? 'Não foi possível importar este arquivo.';
+}
+
 /**
  * Baixa `snapshot` como arquivo .json (Blob + <a download>). Glue de
  * navegador só — sem lógica de validação. Retorna true/false, nunca lança.

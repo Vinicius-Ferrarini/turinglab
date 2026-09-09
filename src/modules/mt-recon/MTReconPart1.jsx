@@ -33,8 +33,12 @@ import { fuzzTMRecognizer, simulateTM, simulateTMSteps } from '../mt/utils/tmAlg
 import { validateMTFormalFields, validateMTFormalTransitions } from '../mt/utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
-import { logEvent } from '../../services/telemetry';
+import { logEvent, hasConsent } from '../../services/telemetry';
 import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
+import { buildSnapshot } from '../shared/persistence/sessionSnapshot.js';
+import {
+  buildExportFilename, downloadSnapshotFile, readImportedFile, describeImportError,
+} from '../shared/persistence/exportImportFile.js';
 
 const SIM_MAX_STEPS = 500;
 
@@ -183,6 +187,49 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
   const { clearSession } = useLevelSessionPersistence({
     moduleKey: 'mt-recon', levelId: level?.id ?? null, payload: sessionPayload, levelLabel: level?.label,
   });
+
+  // Aplica um payload restaurado (autosave OU arquivo importado — mesmo
+  // shape) ao estado do orquestrador. Usado por loadLevel (ao entrar na
+  // fase) e por handleImportSessionFile (fase já aberta na tela).
+  const applyRestoredPayload = useCallback((restored) => {
+    g.reset({ nodes: restored.nodes ?? [], transitions: restored.transitions ?? [] });
+    setSim(null); setSimHighlight({ nodeId: null, type: null, tIdx: null, seq: 0 });
+    setMode('IDLE'); setConnectingSource(null);
+    setVictory(!!restored.victory);
+    setTestedWords(restored.testedWords ?? []);
+    setTestMode(restored.testMode ?? 'LANGUAGE');
+    wordleGame.setHintStage(restored.hintStage ?? 0);
+    setIsDrawingUnlocked(!!restored.isDrawingUnlocked);
+    setFormalAnswers(restored.formal?.formalAnswers ?? EMPTY_FORMAL);
+    setFormalMode(false);
+    setFormalElementsValid(!!restored.formal?.formalElementsValid);
+    setFieldErrors({}); setCellErrors({});
+  }, [g, wordleGame]);
+
+  // ── Exportar/Importar sessão em .json (Feature B — ver ADR 0011) ───────────
+  const handleExportSession = useCallback(() => {
+    if (!level) return;
+    const snapshot = buildSnapshot('mt-recon', level.id, sessionPayload, level.label);
+    const ok = downloadSnapshotFile(snapshot, buildExportFilename('mt-recon', level.id));
+    if (ok) {
+      showToast?.('Fase exportada em .json!', 'success');
+      if (hasConsent()) logEvent({ tipo_evento: 'exportar_fase', modulo: 'mt-recon', nivel_id: level.id });
+    } else {
+      showToast?.('Não foi possível exportar a fase.', 'error');
+    }
+  }, [level, sessionPayload, showToast]);
+
+  const handleImportSessionFile = useCallback(async (file) => {
+    if (!level) return;
+    const res = await readImportedFile(file, 'mt-recon', level.id);
+    if (!res.ok) {
+      showToast?.(describeImportError(res.reason), 'error');
+      return;
+    }
+    applyRestoredPayload(res.snapshot.payload);
+    showToast?.('Fase importada com sucesso!', 'success');
+    if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'mt-recon', nivel_id: level.id });
+  }, [level, applyRestoredPayload, showToast]);
 
   // ── Modo Aula: iniciar / navegar / sair ─────────────────────────────────────
   const applyStep = useCallback((st) => {
@@ -781,6 +828,8 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
         onCloseLesson={finishLesson}
         showSizeHint={!isDrawingUnlocked && (!effectiveShortestWord || wordleGame.hintStage < 2)}
         onSizeHint={effectiveShortestWord ? handleWordleHint : handleSizeHint}
+        onExportSession={handleExportSession}
+        onImportSessionFile={handleImportSessionFile}
       />
 
       <div className="workspace">

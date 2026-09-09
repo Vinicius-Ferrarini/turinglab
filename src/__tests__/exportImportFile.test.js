@@ -5,6 +5,7 @@ import {
   checkFileSize,
   checkPayloadSanity,
   parseImportedSnapshot,
+  describeImportError,
 } from '../modules/shared/persistence/exportImportFile.js';
 import { buildSnapshot } from '../modules/shared/persistence/sessionSnapshot.js';
 
@@ -143,6 +144,37 @@ describe('parseImportedSnapshot', () => {
     // Se parseImportedSnapshot usasse eval, isto executaria o construtor Error.
     const malicious = '{"schemaVersion":1,"app":"turinglab","moduleKey":"afd-p1","levelId":12,"payload":{"nodes":"1); throw new Error(\'exploited\'); (\'"}}';
     expect(() => parseImportedSnapshot(malicious, 'afd-p1', 12)).not.toThrow();
+  });
+
+});
+
+// ─── Suite 5: describeImportError — mensagem de toast por motivo ──────────────
+describe('describeImportError', () => {
+
+  it('cada reason conhecido tem uma mensagem específica não genérica', () => {
+    const reasons = [
+      'file_too_large', 'invalid_json', 'too_deep', 'array_too_large',
+      'not_an_object', 'bad_payload_shape', 'unexpected_payload_field',
+      'unknown_module_key', 'schema_version_mismatch', 'bad_app',
+      'module_mismatch', 'level_mismatch', 'no_file', 'read_error',
+    ];
+    const messages = reasons.map(describeImportError);
+    expect(new Set(messages).size).toBeGreaterThan(1); // não são todas a mesma string genérica
+    for (const msg of messages) expect(typeof msg).toBe('string');
+  });
+
+  it('module_mismatch avisa especificamente que é de outro módulo', () => {
+    expect(describeImportError('module_mismatch')).toMatch(/outro módulo/i);
+  });
+
+  it('level_mismatch avisa especificamente que é de outra fase', () => {
+    expect(describeImportError('level_mismatch')).toMatch(/outra fase/i);
+  });
+
+  it('reason desconhecido/undefined → mensagem genérica, nunca lança', () => {
+    expect(() => describeImportError(undefined)).not.toThrow();
+    expect(() => describeImportError('algo_novo_nunca_visto')).not.toThrow();
+    expect(typeof describeImportError(undefined)).toBe('string');
   });
 
 });

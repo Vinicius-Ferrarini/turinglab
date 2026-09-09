@@ -22,10 +22,14 @@ import { buildNoAttemptHintMessage, buildSizeHintMessage } from './utils/sizeHin
 import { EMPTY_FORMAL_STATE } from './utils/formalDescriptionLogic';
 import useWordGuessGame from '../shared/useWordGuessGame';
 import useLevelSessionPersistence, { readLevelSession } from '../shared/persistence/useLevelSessionPersistence.js';
+import { buildSnapshot } from '../shared/persistence/sessionSnapshot.js';
+import {
+  buildExportFilename, downloadSnapshotFile, readImportedFile, describeImportError,
+} from '../shared/persistence/exportImportFile.js';
 import { findSecondShortestWord } from '../shared/wordExercises/findSecondShortestWord.js';
 import { UNAVAILABLE_LEVELS, HIDDEN_LEVELS, LEVEL_DIFFICULTY, DIFF_COLOR } from '../../levels';
 import { AFD_LEVELS as GAME_LEVELS } from '../../levels_data/afd/index.js';
-import { logEvent } from '../../services/telemetry';
+import { logEvent, hasConsent } from '../../services/telemetry';
 
 // ─── Utilitário: gera um UID curto ───────────────────────────────────────────
 let _uidCounter = 0;
@@ -305,6 +309,55 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     moduleKey: 'afd-p1', levelId: currentLevel?.id ?? null, payload: sessionPayload, levelLabel: currentLevel?.label,
   });
 
+  // Aplica um payload restaurado (autosave OU arquivo importado — mesmo
+  // shape) ao estado do orquestrador. `level` é passado explicitamente (em
+  // vez de ler `currentLevel`) porque loadLevel chama isto ANTES do
+  // setCurrentLevel(level) surtir efeito (state ainda não commitado nesse
+  // ponto do callback); handleImportSessionFile passa currentLevel (a fase
+  // já aberta na tela).
+  const applyRestoredPayload = useCallback((restored, level) => {
+    const restoredNodes = restored.nodes ?? [];
+    const restoredTransitions = restored.transitions ?? [];
+    setNodes(restoredNodes);
+    setTransitions(restoredTransitions);
+    resetHistory(restoredNodes, restoredTransitions);
+    setTestWords(restored.testWords ?? []);
+    setIsDrawingUnlocked(!!restored.isDrawingUnlocked);
+    // Tabuleiro restaurado destravado precisa repopular as cartas do rodapé
+    // (só existem no state normalmente via unlock() — ver buildDrawnCards
+    // acima), senão o canvas aparece destravado sem nada pra jogar.
+    setDrawnCards(restored.isDrawingUnlocked ? buildDrawnCards(level) : []);
+    wordleGame.setHintStage(restored.hintStage ?? 0);
+    setShowVictoryScreen(!!restored.showVictoryScreen);
+    setShowImpossibleScreen(!!restored.showImpossibleScreen);
+    setFormalSnapshot(restored.formal ?? null);
+  }, [resetHistory, wordleGame]);
+
+  // ── Exportar/Importar sessão em .json (Feature B — ver ADR 0011) ───────────
+  const handleExportSession = useCallback(() => {
+    if (!currentLevel) return;
+    const snapshot = buildSnapshot('afd-p1', currentLevel.id, sessionPayload, currentLevel.label);
+    const ok = downloadSnapshotFile(snapshot, buildExportFilename('afd-p1', currentLevel.id));
+    if (ok) {
+      showToast('Fase exportada em .json!', 'success');
+      if (hasConsent()) logEvent({ tipo_evento: 'exportar_fase', modulo: 'afd-p1', nivel_id: currentLevel.id });
+    } else {
+      showToast('Não foi possível exportar a fase.', 'error');
+    }
+  }, [currentLevel, sessionPayload, showToast]);
+
+  const handleImportSessionFile = useCallback(async (file) => {
+    if (!currentLevel) return;
+    const res = await readImportedFile(file, 'afd-p1', currentLevel.id);
+    if (!res.ok) {
+      showToast(describeImportError(res.reason), 'error');
+      return;
+    }
+    applyRestoredPayload(res.snapshot.payload, currentLevel);
+    showToast('Fase importada com sucesso!', 'success');
+    if (hasConsent()) logEvent({ tipo_evento: 'importar_fase', modulo: 'afd-p1', nivel_id: currentLevel.id });
+  }, [currentLevel, applyRestoredPayload, showToast]);
+
   // ── Carrega fase ──────────────────────────────────────────────────────────
   const loadLevel = useCallback((level) => {
     _uidCounter = 0;
@@ -352,27 +405,9 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
 
     // ── Hidrata sessão salva (se houver), depois do reset em branco acima ────
     const restored = readLevelSession('afd-p1', level.id);
-    if (restored) {
-      const restoredNodes = restored.nodes ?? [];
-      const restoredTransitions = restored.transitions ?? [];
-      setNodes(restoredNodes);
-      setTransitions(restoredTransitions);
-      resetHistory(restoredNodes, restoredTransitions);
-      setTestWords(restored.testWords ?? []);
-      setIsDrawingUnlocked(!!restored.isDrawingUnlocked);
-      // Tabuleiro restaurado destravado precisa repopular as cartas do
-      // rodapé (só existem no state normalmente via unlock() — ver
-      // buildDrawnCards acima), senão o canvas aparece destravado sem nada
-      // pra jogar.
-      setDrawnCards(restored.isDrawingUnlocked ? buildDrawnCards(level) : []);
-      wordleGame.setHintStage(restored.hintStage ?? 0);
-      setShowVictoryScreen(!!restored.showVictoryScreen);
-      setShowImpossibleScreen(!!restored.showImpossibleScreen);
-      setFormalSnapshot(restored.formal ?? null);
-    } else {
-      setFormalSnapshot(null);
-    }
-  }, [resetHistory, resetDraw, resetZoom, wordleGame]);
+    if (restored) applyRestoredPayload(restored, level);
+    else setFormalSnapshot(null);
+  }, [resetHistory, resetDraw, resetZoom, applyRestoredPayload]);
 
   // ── Modo forçado (ex.: Boss/Trabalho): pula o menu interno e entra direto
   // no nível indicado. Só roda uma vez ao montar — o componente é remontado
@@ -745,6 +780,8 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
         onCloseLesson={handleLessonFinish}
         showSizeHint={!isDrawingUnlocked && (!WORDLE_GRID_LEVEL_IDS.has(currentLevel?.id) || wordleGame.hintStage < 2)}
         onSizeHint={WORDLE_GRID_LEVEL_IDS.has(currentLevel?.id) ? handleWordleHint : handleSizeHint}
+        onExportSession={handleExportSession}
+        onImportSessionFile={handleImportSessionFile}
       />
 
       <div className="workspace">

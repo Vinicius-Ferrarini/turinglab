@@ -6,6 +6,7 @@
 //
 // Props exclusivas do AFD (`toggleSidebar`) e do AP (`secondaryAction`) são
 // opcionais — omitidas, o header se comporta exatamente como antes.
+import { useRef } from 'react';
 import './GameHeader.css';
 import { SvgStars } from '../SvgStar';
 import { navBtnStyle, navBtnDisabledStyle } from './navButtonStyles';
@@ -28,7 +29,14 @@ export default function GameHeader({
   // saber se ainda está na fase de descoberta). onSizeHint calcula e mostra a
   // mensagem (ex.: via showToast) — este componente não sabe o conteúdo dela.
   showSizeHint = false, onSizeHint,
+  // Exportar/Importar sessão em .json (Feature B — ver ADR 0011). Duas ações
+  // lado a lado (não cabiam no slot único de secondaryAction): mostradas só
+  // quando os 2 módulos passam onExportSession/onImportSessionFile — os 4
+  // orquestradores-alvo passam sempre os dois juntos. onImportSessionFile
+  // recebe o File escolhido no <input type="file"> oculto.
+  onExportSession, onImportSessionFile,
 }) {
+  const importFileInputRef = useRef(null);
   const objectiveText = objective ?? currentLevel?.formula ?? '';
   const levelLabel = label ?? currentLevel?.label;
   const diffBg = diffColor ?? '#fff';
@@ -100,6 +108,39 @@ export default function GameHeader({
           >
             {secondaryAction.label}
           </button>
+        )}
+        {onExportSession && (
+          <button
+            className="menu-btn"
+            style={{ padding: '4px 12px', fontSize: 12, marginLeft: 6 }}
+            onClick={onExportSession}
+            title="Baixar o estado desta fase em .json"
+          >
+            ⬇ Exportar
+          </button>
+        )}
+        {onImportSessionFile && (
+          <>
+            <button
+              className="menu-btn"
+              style={{ padding: '4px 12px', fontSize: 12, marginLeft: 6 }}
+              onClick={() => importFileInputRef.current?.click()}
+              title="Importar um .json salvo antes (mesma fase)"
+            >
+              ⬆ Importar
+            </button>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                e.target.value = ''; // permite reimportar o mesmo arquivo em seguida
+                if (file) onImportSessionFile(file);
+              }}
+            />
+          </>
         )}
       </div>
       <div style={{ width: 180, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>

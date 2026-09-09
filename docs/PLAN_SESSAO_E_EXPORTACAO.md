@@ -211,6 +211,34 @@ validada com o usuário — não reabrir). Cada item: teste primeiro → impleme
       `storageAdapter.js` — cobertura via Playwright no item 9.
       Testes: `npx vitest run exportImportFile.test.js` 17/17. `npm test`
       completo: **2072/2072 passando** (26 arquivos) — sem regressão.
-- [ ] **8. UI de exportar/importar** — botão no `GameHeader.jsx`
+- [x] **8. UI de exportar/importar** — botão no `GameHeader.jsx` ✅
+      `secondaryAction` é um slot de 1 ação só (usado hoje por nenhum dos 4
+      módulos, mas documentado como "livre"); como Exportar+Importar são 2
+      ações lado a lado, criei um par de props novo (`onExportSession`/
+      `onImportSessionFile`) em vez de forçar as duas dentro do slot
+      existente — mais simples que virar `secondaryAction` num array só pra
+      isso, e não muda o formato de quem já usa `secondaryAction`. Renderiza
+      "⬇ Exportar" + "⬆ Importar" (com `<input type="file" accept=".json">`
+      oculto, clique delegado via `useRef`) só quando o orquestrador passa
+      os dois callbacks — os 4 orquestradores-alvo sempre passam ambos.
+      Cada orquestrador ganhou `applyRestoredPayload(restored)` — mesma
+      função de hidratação usada tanto pelo autosave (dentro de `loadLevel`,
+      Fase A) quanto pelo import de arquivo agora, evitando duplicar a
+      lógica de "como aplicar um payload salvo ao state". AFD e MT-Recon/
+      MT-Trans passaram a chamar essa função também de dentro do `loadLevel`
+      (refatoração pequena, sem mudar comportamento — reconfirmado pelos 71
+      testes E2E). No AP, mantive a lógica de restauração do `loadLevel`
+      inline como já estava (mistura telemetria/tela/etc. de um jeito que
+      não valia a pena desembaraçar agora) e criei `applyRestoredPayload`
+      só para o import — duplica ~8 linhas mas evita retocar o `loadLevel`
+      do AP, que já tinha sido validado pelos 6 testes E2E da Fase A;
+      trade-off consciente entre DRY e não reabrir código já testado.
+      `logEvent({tipo_evento:'exportar_fase'|'importar_fase'})` só quando
+      `hasConsent()` — mesmo padrão de todo o resto do projeto, sem exceção.
+      Testes: `npx eslint` nos 5 arquivos tocados (GameHeader +4
+      orquestradores) — mesma contagem de warnings de antes em cada um (0
+      erros). `npm test`: 2076/2076. `npx playwright test`: **71/71
+      passando** (specs da Fase A inteiros, confirmando que os novos botões
+      no header não quebraram nenhum seletor/fluxo existente).
 - [ ] **9. E2E Playwright (Feature B)** — `e2e/export_import_json.spec.js`
 - [ ] **10. Fechamento** — CLAUDE.md, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e`
