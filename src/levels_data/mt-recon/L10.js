@@ -12,7 +12,7 @@ const MT_RECON_L10 = {
   language:    '{aⁱbʲcᵏ / j = i + k, i ≥ 0, k ≥ 0}',
   description: 'Reconheça aⁱbʲcᵏ onde a quantidade de "b" é igual à soma das quantidades de "a" e "c".',
   hint:        'Para cada "a" no início, marque um "b"; para cada "c" no final, marque outro "b". No fim, todos os "b" devem estar marcados.',
-  acceptedWords: ["","bc","ab","abbc","aabb","aabbbc"],
+  acceptedWords: ["","bc","ab","abbc","aabb","aabbbc","bbcc"],
   rejectedWords: ["a","b","c","bb","abc","ac","aabc","abcc"],
   formalDescription: {
     sigma:   '{a,b,c}',
