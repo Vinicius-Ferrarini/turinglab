@@ -46,6 +46,10 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
   const [mode, setMode]     = useState('IDLE');
   const [connectingSource, setConnectingSource] = useState(null);
   const [errAction, setErrAction] = useState(null);
+  // Destaque da transição JÁ EXISTENTE que bloqueou uma tentativa de criar
+  // uma seta conflitante (Set<transitionIdx>) — errAction só pisca botão de
+  // ferramenta (TOGGLE_INITIAL), não aponta uma transição específica.
+  const [errorTransitionIndices, setErrorTransitionIndices] = useState(null);
   const [prof, setProf]     = useState({ message: '', mood: 'serio' });
   const [sim, setSim]       = useState(null);
   const [simHighlight, setSimHighlight] = useState({ nodeId: null, type: null, tIdx: null, seq: 0 });
@@ -103,7 +107,7 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
     setGuess: setSimWord,
   });
 
-  const g = usePDAGraph({ showToast, selectedNodes, setSelectedNodes });
+  const g = usePDAGraph({ showToast, selectedNodes, setSelectedNodes, setErrorTransitionIndices });
   const draw = useAPDrawing(innerCanvasRef);
   const lesson = useAPGuidedLesson(level);
   const { goTo: lessonGoTo, finish: lessonFinishRaw, reset: lessonReset, steps: lessonSteps } = lesson;
@@ -786,6 +790,7 @@ export default function APPart1({ onBack, progress, updateProgress, forceLevelId
           setSelectedNodes={setSelectedNodes}
           selectionBox={selectionBox}
           setSelectionBox={setSelectionBox}
+          errorTransitionIndices={errorTransitionIndices}
         />
         </div>
 

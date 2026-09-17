@@ -9,6 +9,16 @@ import { validateStudentPda, pdaAcceptingRun, pdaRejectingTrace } from '../utils
 let _uid = 0;
 const genUid = () => `_ap${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
 
+// ─── findConflictingTransitionIndex: acha o ÍNDICE da transição JÁ EXISTENTE
+// que bloquearia uma nova tripla (from, read, pop) — mesmo critério de
+// determinismo já usado por addTriple/editTriple (puro, testável). Devolve -1
+// quando não há conflito. Usado só pra DESTACAR a seta já existente que
+// causou o bloqueio — a checagem de bloqueio em si continua inline (booleana)
+// em addTriple/editTriple, sem mudar o `false` que os call-sites já esperam.
+export function findConflictingTransitionIndex(transitions, from, read, pop, excludeIdx = -1) {
+  return transitions.findIndex((t, i) => i !== excludeIdx && t.from === from && t.read === read && t.pop === pop);
+}
+
 const EMPTY = { nodes: [], transitions: [] };
 export const EMPTY_PDA_GRAPH = EMPTY;
 const initial = { past: [], present: EMPTY, future: [], lastEmptyAdd: null };
@@ -49,7 +59,7 @@ export function pdaGraphReducer(state, action) {
   }
 }
 
-export default function usePDAGraph({ showToast, selectedNodes = [], setSelectedNodes = () => {} } = {}) {
+export default function usePDAGraph({ showToast, selectedNodes = [], setSelectedNodes = () => {}, setErrorTransitionIndices = () => {} } = {}) {
   const [hist, dispatch] = useReducer(pdaGraphReducer, initial);
   const { nodes, transitions } = hist.present;
   const canUndo = hist.past.length > 0;
@@ -158,17 +168,20 @@ export default function usePDAGraph({ showToast, selectedNodes = [], setSelected
     // é adiada para o editTriple, quando o aluno preenche os campos.
     const isBlank = !triple.read && !triple.pop && !triple.push;
     if (!isBlank) {
-      const conflict = transitions.some(t =>
-        t.from === from && t.read === triple.read && t.pop === triple.pop);
-      if (conflict) {
+      const conflictIdx = findConflictingTransitionIndex(transitions, from, triple.read, triple.pop);
+      if (conflictIdx !== -1) {
         showToast?.(`Ação bloqueada: O estado já possui uma transição que lê "${triple.read || 'λ'}" e desempilha "${triple.pop || 'λ'}". O AP deve ser determinístico.`, 'error');
+        // Destaca a seta JÁ EXISTENTE que causou o bloqueio — a linha da seta
+        // não muda, só o chip do rótulo pisca (mesmo padrão do AFD).
+        setErrorTransitionIndices(new Set([conflictIdx]));
+        setTimeout(() => setErrorTransitionIndices(null), 3000);
         return false;
       }
     }
     dispatch({ type: 'COMMIT', next: { nodes, transitions: [...transitions, { from, to, ...triple }] },
       emptyAdd: isBlank ? transitions.length : null });
     return true;
-  }, [nodes, transitions, showToast]);
+  }, [nodes, transitions, showToast, setErrorTransitionIndices]);
 
   const editTriple = useCallback((tIdx, triple) => {
     const current = transitions[tIdx];
@@ -183,10 +196,11 @@ export default function usePDAGraph({ showToast, selectedNodes = [], setSelected
       showToast?.('Esta transição exata já existe!', 'info');
       return false;
     }
-    const conflict = transitions.some((t, i) =>
-      i !== tIdx && t.from === current.from && t.read === r && t.pop === p);
-    if (conflict) {
+    const conflictIdx = findConflictingTransitionIndex(transitions, current.from, r, p, tIdx);
+    if (conflictIdx !== -1) {
       showToast?.(`Ação bloqueada: O estado já possui uma transição que lê "${r || 'λ'}" e desempilha "${p || 'λ'}". O AP deve ser determinístico.`, 'error');
+      setErrorTransitionIndices(new Set([conflictIdx]));
+      setTimeout(() => setErrorTransitionIndices(null), 3000);
       return false;
     }
     const next = { nodes, transitions: transitions.map((t, i) => i === tIdx ? { ...t, ...triple } : t) };
@@ -194,7 +208,7 @@ export default function usePDAGraph({ showToast, selectedNodes = [], setSelected
     // — senão a seta vira 2 entradas de histórico (bug do "desfazer 2 vezes").
     dispatch(hist.lastEmptyAdd === tIdx ? { type: 'SQUASH', next } : { type: 'COMMIT', next });
     return true;
-  }, [nodes, transitions, hist.lastEmptyAdd, showToast]);
+  }, [nodes, transitions, hist.lastEmptyAdd, showToast, setErrorTransitionIndices]);
 
   const removeTriple = useCallback((tIdx) => {
     dispatch({ type: 'COMMIT', next: { nodes, transitions: transitions.filter((_, i) => i !== tIdx) } });

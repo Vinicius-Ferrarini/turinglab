@@ -74,6 +74,7 @@ export default function APCanvas({
   languageAttempts = [],
   simWord = '',
   onTestWord,
+  errorTransitionIndices = null,
 }) {
   const localInnerRef = useRef(null);
   const innerRef = innerCanvasRef || localInnerRef;
@@ -638,6 +639,7 @@ export default function APCanvas({
                 onAutoEditConsumed={clearAutoEditKey}
                 highlightTIdx={simHighlight?.tIdx ?? lessonHighlightTIdx ?? null}
                 highlightSeq={simHighlight?.tIdx != null ? simHighlight.seq : null}
+                errorTransitionIndices={errorTransitionIndices}
               />
             ))}
 
