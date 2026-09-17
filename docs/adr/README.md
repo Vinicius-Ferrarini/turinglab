@@ -24,6 +24,10 @@ em `docs/archive/` em vez de duplicar o conteúdo.
 | [0010](0010-formal-validacao-contra-grafo-real.md) | Descrição Formal valida contra o grafo do aluno, não o gabarito | aceita |
 | [0011](0011-persistencia-de-sessao-e-exportacao-json.md) | Persistência de sessão por fase + exportar/importar em `.json` | aceita |
 | [0012](0012-estrelas-no-export-e-limpeza-manual-de-fase.md) | Estrelas no exportar/importar + limpeza de sessão vira ação manual | aceita |
+| [0013](0013-afd-mensagem-nao-determinismo-cita-simbolo.md) | AFD_1: mensagem de não-determinismo cita o símbolo duplicado | aceita |
+| [0014](0014-afd-delta-incompleta-diagnostico-aditivo.md) | AFD_1: δ incompleta é diagnóstico aditivo, não nova categoria bloqueante | aceita |
+| [0015](0015-mt-highlight-nao-determinismo-canvas.md) | MT Transdutora: destaque visual de não-determinismo no canvas | aceita |
+| [0016](0016-mt-trans-trace-automatico-contraexemplo.md) | MT Transdutora: trace automático de contraexemplo na validação | aceita |
 
 ## Planos originais arquivados
 
