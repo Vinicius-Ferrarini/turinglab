@@ -105,6 +105,22 @@ export function findDuplicateSymbol(nodeId, transitions) {
   return null;
 }
 
+// ─── findConflictingTransitionIndices: índices (no array `transitions`) de
+// TODAS as setas de saída de `nodeId` que carregam o símbolo duplicado
+// encontrado por findDuplicateSymbol (puro, testável). Usado pra destacar o
+// quadrado de rótulo de cada seta conflitante no canvas — nunca a linha da
+// seta em si (que continua preta) — mesmo efeito visual de "seta sem símbolo
+// ainda" (.transition-label.error-pulse-severe), só que aplicado a um
+// conjunto de setas em vez de uma só.
+export function findConflictingTransitionIndices(nodeId, transitions) {
+  const symbol = findDuplicateSymbol(nodeId, transitions);
+  if (symbol == null) return [];
+  return transitions
+    .map((t, idx) => ({ t, idx }))
+    .filter(({ t }) => t.from === nodeId && t.symbol.split(',').map(s => s.trim()).includes(symbol))
+    .map(({ idx }) => idx);
+}
+
 // ─── traceDeadEnd: percorre `word` a partir do estado inicial e devolve o
 // (estado, símbolo) exatos onde a δ não tem transição definida — δ incompleta
 // (puro, testável). Devolve null quando o percurso completa (mesmo terminando
@@ -152,6 +168,7 @@ export default function useAFDGraph({
   testWords,
   showToast,
   setHighlightedError,
+  setErrorTransitionIndices,
   guidedLessonStep,
   lessonCurStepData,
 }) {
@@ -190,6 +207,11 @@ export default function useAFDGraph({
         if (showErrors) {
           setHighlightedError(node.id);
           setTimeout(() => setHighlightedError(null), 3000);
+          // Quadrados de rótulo das setas conflitantes piscam junto com o nó
+          // (mesmo efeito de "seta sem símbolo ainda") — a linha da seta em
+          // si continua preta, só o(s) quadrado(s) do símbolo destacam.
+          setErrorTransitionIndices(new Set(findConflictingTransitionIndices(node.id, transitions)));
+          setTimeout(() => setErrorTransitionIndices(null), 3000);
           const dupSymbol = findDuplicateSymbol(node.id, transitions);
           showToast(`Não determinístico! "${node.label || node.id}" tem duas setas para o símbolo '${dupSymbol}'.`, 'error');
         }
@@ -259,7 +281,7 @@ export default function useAFDGraph({
     }
 
     return true;
-  }, [nodes, transitions, testWords, showToast, currentLevel, setHighlightedError]);
+  }, [nodes, transitions, testWords, showToast, currentLevel, setHighlightedError, setErrorTransitionIndices]);
 
   // ── Apagar nós selecionados (Delete) ───────────────────────────────────────
   const deleteSelected = useCallback(() => {

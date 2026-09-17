@@ -163,6 +163,11 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
   // estruturais) porque CanvasArea já suporta esse formato (Set) desde a
   // Minimização (MinDrawStep.jsx) — só não era alimentado aqui ainda.
   const [errorNodeIds, setErrorNodeIds] = useState(null);
+  // Destaque das setas conflitantes num não-determinismo (Set<transitionIdx>)
+  // — só o QUADRADO do rótulo (onde fica a letra) pisca, igual quando a seta
+  // ainda não tem símbolo (.transition-label.error-pulse-severe); a LINHA da
+  // seta nunca fica vermelha.
+  const [errorTransitionIndices, setErrorTransitionIndices] = useState(null);
   const [professorMessage, setProfessorMessage] = useState('');
   const [showVictoryScreen, setShowVictoryScreen]     = useState(false);
   const [showImpossibleScreen, setShowImpossibleScreen] = useState(false);
@@ -234,6 +239,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
     testWords,
     showToast,
     setHighlightedError,
+    setErrorTransitionIndices,
     guidedLessonStep,
     lessonCurStepData,
   });
@@ -925,6 +931,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
           transitionRenders={transitionRenders}
           highlightedError={highlightedError}
           errorNodeIds={errorNodeIds}
+          errorTransitionIndices={errorTransitionIndices}
           handleTransitionLineClick={handleTransitionLineClick}
           transitionLabelRefs={transitionLabelRefs}
           handleAddSymbol={handleAddSymbol}

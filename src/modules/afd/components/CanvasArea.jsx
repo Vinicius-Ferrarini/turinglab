@@ -82,6 +82,7 @@ export default function CanvasArea({
   userNodesSnapshot, userTransitionsSnapshot, resetHistory,
   lessonActive = false,
   errorNodeIds = null,
+  errorTransitionIndices = null,
   enableContextMenu = true,
   // WordleBoard: histórico de tentativas da fase "descubra a menor palavra"
   // (mesma lista testWords do orquestrador) e wordleGame (mecânica de
@@ -790,7 +791,7 @@ export default function CanvasArea({
                   selectedSymbolCard={selectedSymbolCard}
                   isDrawingUnlocked={isDrawingUnlocked}
                   lessonActive={lessonActive}
-                  isError={highlightedError === `transition-${tr.idx}`}
+                  isError={highlightedError === `transition-${tr.idx}` || !!errorTransitionIndices?.has(tr.idx)}
                   activeSymbol={simHighlight?.tIdx === tr.idx ? simHighlight.symbol : null}
                   activeSeq={simHighlight?.tIdx === tr.idx ? simHighlight.seq : null}
                   labelSide={tr.labelSide}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAFDPure, findDuplicateSymbol, traceDeadEnd } from '../modules/afd/hooks/useAFDGraph.js';
+import { validateAFDPure, findDuplicateSymbol, traceDeadEnd, findConflictingTransitionIndices } from '../modules/afd/hooks/useAFDGraph.js';
 
 // ─── Grafo base: q0 -a-> q1(final), q0 -b-> q0 ──────────────────────────────
 // Reconhece b*a  (pelo menos um 'a' no final, precedido de qualquer qtd de 'b')
@@ -273,6 +273,62 @@ describe('traceDeadEnd', () => {
   it('sem estado inicial → null', () => {
     const nodes = BASE_NODES.map(n => ({ ...n, isInitial: false }));
     expect(traceDeadEnd(nodes, BASE_TRANS, 'a')).toBeNull();
+  });
+
+});
+
+// ─── Suite 7: findConflictingTransitionIndices (função pura) ─────────────────
+describe('findConflictingTransitionIndices', () => {
+
+  it('duas setas com o mesmo símbolo saindo do mesmo nó → os 2 índices, na ordem do array', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q0', to: 'q0', symbol: 'a' },
+    ];
+    expect(findConflictingTransitionIndices('q0', trans)).toEqual([0, 1]);
+  });
+
+  it('sem duplicata → array vazio', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q0', to: 'q0', symbol: 'b' },
+    ];
+    expect(findConflictingTransitionIndices('q0', trans)).toEqual([]);
+  });
+
+  it('3 setas com o mesmo símbolo do mesmo nó → os 3 índices', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q0', to: 'q0', symbol: 'a' },
+      { from: 'q0', to: 'q2', symbol: 'a' },
+    ];
+    expect(findConflictingTransitionIndices('q0', trans)).toEqual([0, 1, 2]);
+  });
+
+  it('símbolo duplicado dentro de um chip multi-símbolo ("a,b") → inclui a seta do chip', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a,b' },
+      { from: 'q0', to: 'q0', symbol: 'a' },
+    ];
+    expect(findConflictingTransitionIndices('q0', trans)).toEqual([0, 1]);
+  });
+
+  it('duplicata só em outro nó → array vazio pro nó consultado', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q1', to: 'q1', symbol: 'a' },
+      { from: 'q1', to: 'q0', symbol: 'a' }, // duplicado em q1, não em q0
+    ];
+    expect(findConflictingTransitionIndices('q0', trans)).toEqual([]);
+  });
+
+  it('setas de OUTRO nó com o mesmo símbolo não entram no resultado (só as do nó consultado)', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q0', to: 'q0', symbol: 'a' },
+      { from: 'q1', to: 'q1', symbol: 'a' }, // outro nó, mesmo símbolo — não deve entrar
+    ];
+    expect(findConflictingTransitionIndices('q0', trans)).toEqual([0, 1]);
   });
 
 });
