@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAFDPure } from '../modules/afd/hooks/useAFDGraph.js';
+import { validateAFDPure, findDuplicateSymbol } from '../modules/afd/hooks/useAFDGraph.js';
 
 // ─── Grafo base: q0 -a-> q1(final), q0 -b-> q0 ──────────────────────────────
 // Reconhece b*a  (pelo menos um 'a' no final, precedido de qualquer qtd de 'b')
@@ -37,13 +37,13 @@ describe('validateAFDPure — falhas estruturais', () => {
       .toMatchObject({ ok: false, reason: 'empty_symbol' });
   });
 
-  it('não-determinismo (símbolo duplicado em um nó) → ok: false, reason: nondeterministic', () => {
+  it('não-determinismo (símbolo duplicado em um nó) → ok: false, reason: nondeterministic, cita nó e símbolo', () => {
     const trans = [
       { from: 'q0', to: 'q1', symbol: 'a' },
       { from: 'q0', to: 'q0', symbol: 'a' }, // 'a' duplicado em q0
     ];
     expect(validateAFDPure({ nodes: BASE_NODES, transitions: trans }))
-      .toMatchObject({ ok: false, reason: 'nondeterministic' });
+      .toMatchObject({ ok: false, reason: 'nondeterministic', nodeId: 'q0', symbol: 'a' });
   });
 
   it('símbolo fora do alfabeto → ok: false, reason: invalid_symbol', () => {
@@ -169,6 +169,44 @@ describe('validateAFDPure — sem currentLevel', () => {
     const trans = [{ from: 'q0', to: 'q1', symbol: 'z' }]; // símbolo qualquer
     expect(validateAFDPure({ nodes: BASE_NODES, transitions: trans }))
       .toMatchObject({ ok: true });
+  });
+
+});
+
+// ─── Suite 5: findDuplicateSymbol (função pura) ──────────────────────────────
+describe('findDuplicateSymbol', () => {
+
+  it('sem duplicata → null', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q0', to: 'q0', symbol: 'b' },
+    ];
+    expect(findDuplicateSymbol('q0', trans)).toBeNull();
+  });
+
+  it('duplicata simples em duas transições distintas → símbolo duplicado', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q0', to: 'q0', symbol: 'a' },
+    ];
+    expect(findDuplicateSymbol('q0', trans)).toBe('a');
+  });
+
+  it('duplicata dentro de um chip multi-símbolo ("a,b" repetindo "a" em outra seta) → símbolo duplicado', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a,b' },
+      { from: 'q0', to: 'q0', symbol: 'a' },
+    ];
+    expect(findDuplicateSymbol('q0', trans)).toBe('a');
+  });
+
+  it('duplicata só em outro nó → null (não conta duplicatas de outros estados)', () => {
+    const trans = [
+      { from: 'q0', to: 'q1', symbol: 'a' },
+      { from: 'q1', to: 'q1', symbol: 'a' },
+      { from: 'q1', to: 'q0', symbol: 'a' }, // duplicado em q1, não em q0
+    ];
+    expect(findDuplicateSymbol('q0', trans)).toBeNull();
   });
 
 });

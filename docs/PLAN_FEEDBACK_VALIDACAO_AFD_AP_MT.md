@@ -1,0 +1,198 @@
+# Plano — Feedback de Validação (AFD_1, AP, MT)
+
+**Status: aprovado, execução em andamento (TDD item a item).**
+
+Origem: pedido para melhorar o feedback de erro (localização exata,
+highlight visual, trace automático) na validação de AFD_1, Autômato com
+Pilha e Máquina de Turing. Investigação feita lendo o código real (não a
+premissa do pedido original) — duas correções relevantes ao enunciado
+original estão documentadas abaixo, na tabela-resumo.
+
+## Tabela-resumo
+
+| Módulo | Erro | Localização exata? | Highlight? | Trace automático? | Ação |
+|---|---|---|---|---|---|
+| AFD_1 | `nondeterministic` | Sim (nó certo) | Sim (nó) | N/A (erro estrutural) | **Item 1** — mensagem não cita o símbolo duplicado |
+| AFD_1 | δ incompleta | **Não existe categoria própria** | Não | Não | **Item 2** — vira diagnóstico adicional em `word_mismatch`/`language_mismatch` |
+| AFD_1 | `word_mismatch` / `language_mismatch` | Sim (palavra exata) | Sim (progressivo, `SimPanel`) | **Sim — já implementado** (commit `3b865b71`, coberto por `e2e/afd1_trace_on_failure.spec.js`) | **Nenhuma ação** — gap do enunciado já foi fechado |
+| AP | `counterexample` | Sim | Sim (progressivo, `APSimPanel`) | Sim (`pdaRejectingTrace`/`pdaAcceptingRun`) | Referência — não mexer |
+| AP | não-determinismo | Bloqueado no desenho (UI) | N/A | N/A | Fora de escopo — não mexer |
+| MT (Transdutora) | `nondeterministic` | Sim (estado+símbolo na mensagem) | **Não** | N/A (erro estrutural) | **Item 3** — adicionar highlight |
+| MT (Transdutora) | `loop`/`rejected`/`wrong-output`/`head-not-rewound` | Sim (palavra no toast) | Não | **Não** | **Item 4** — trace automático (MAIOR RISCO) |
+
+**Correções ao enunciado, confirmadas lendo o código:**
+- **AFD `word_mismatch`/`language_mismatch`**: o enunciado dizia "só toast, sem highlight, painel abre vazio". Isso **não é mais verdade** — `AFDPart1.jsx:666-710` já abre `SimPanel` automaticamente com a palavra certa, nota de erro e trace progressivo com highlight (mesmo espírito do AP), e já existe `e2e/afd1_trace_on_failure.spec.js` cobrindo isso. Nenhuma ação necessária.
+- **MT — `tmAlgorithms.js`**: ao contrário do que o enunciado sugere, o Item 4 **não precisa alterar `tmAlgorithms.js`**. `simulateTMSteps` já é genérica (usada por MT Reconhecedora) e funciona sem mudanças para a Transdutora; `MTSimPanel.jsx` já suporta os 4 motivos de contraexemplo da Transdutora. O trabalho real é só em `MTPart1.jsx` (wiring, no padrão que `MTReconPart1.jsx` já usa).
+
+---
+
+## Item 1 — AFD_1: mensagem de não-determinismo cita o símbolo duplicado
+
+**Risco: baixo.**
+
+### Spec (SDD)
+
+Arquivo: `src/modules/afd/hooks/useAFDGraph.js`.
+
+Nova função pura exportada (mesmo padrão de `mergeSymbols`/`lvlAccepts`, já testáveis isoladamente):
+```js
+export function findDuplicateSymbol(nodeId, transitions) // → string | null
+```
+Retorna o primeiro símbolo repetido nas transições de saída de `nodeId` (percorrendo na ordem do array, símbolos "a,b" já splitados).
+
+`validateAFDPure` — branch de não-determinismo (linha 31) muda de:
+```js
+return { ok: false, reason: 'nondeterministic' };
+```
+para:
+```js
+return { ok: false, reason: 'nondeterministic', nodeId: node.id, symbol: findDuplicateSymbol(node.id, transitions) };
+```
+(`reason` continua `'nondeterministic'` — sem categoria nova.)
+
+`validateAFDSilent` — mensagem (linha 146) muda de:
+```
+Não determinístico! "${label}" tem símbolo duplicado nas setas.
+```
+para:
+```
+Não determinístico! "${label}" tem duas setas para o símbolo '${symbol}'.
+```
+(texto exato, símbolo vindo de `findDuplicateSymbol`).
+
+Highlight: **inalterado** — `setHighlightedError(node.id)` já destaca o nó certo (confirmado no código); nenhum `errorNodeIds`/Set entra neste item.
+
+### TDD
+- [ ] **Passo 1 (RED)**: em `src/__tests__/validateAFD.test.js`, novo `describe('findDuplicateSymbol')` com casos (sem duplicata → null; duplicata simples; duplicata em chip multi-símbolo "a,b"); e atualização do teste existente "não-determinismo" para `toMatchObject({ reason:'nondeterministic', nodeId:'q0', symbol:'a' })`. Rodar e colar a falha real.
+- [ ] **Passo 2 (GREEN)**: implementar `findDuplicateSymbol` + atualizar `validateAFDPure`/`validateAFDSilent`. **Feito:** commit `<hash>`, suíte N/N.
+- [ ] **Passo 3 (REFACTOR)**: `npm test` completo (não só o arquivo novo) + `npm run lint` sem warning novo. **Feito:** commit `<hash>`.
+
+---
+
+## Item 2 — AFD_1: δ incompleta como diagnóstico (não como bloqueio novo)
+
+**Risco: baixo-médio.** Decisão de design importante (ver abaixo).
+
+### Decisão de escopo (por que não é uma categoria de erro bloqueante)
+AFD_1 não é validado por completude estrutural — ele já aceita grafos parciais (transição ausente = rejeição implícita) e valida por bateria + `fuzzDFA` (equivalência de linguagem completa). Isso é **diferente** de Minimização (`dfaAlgorithms.js`/`analyzeDrawnDFA`), que já tem uma checagem de completude **bloqueante** própria (`code:'incomplete'`, linha 231-236) porque lá o gabarito exige um DFA completo. Copiar esse gate bloqueante para AFD_1 mudaria o critério de aprovação de nível — **proibido pelo "Fora de escopo"**. Então: δ incompleta vira um **campo adicional de diagnóstico** anexado a uma falha que **já** aconteceria hoje (`word_mismatch`/`language_mismatch`), nunca uma nova causa de reprovação.
+
+### Spec (SDD)
+
+Arquivo: `src/modules/afd/hooks/useAFDGraph.js`.
+
+Nova função pura exportada:
+```js
+export function traceDeadEnd(nodes, transitions, word) // → { nodeId, symbol } | null
+```
+Refaz o percurso de `word` a partir do estado inicial; se travar por falta de transição, devolve `{ nodeId, symbol }` do ponto exato da travada; senão `null`. (Implementação isolada — **não** mexe em `simulateDFA`, que continua devolvendo booleano puro para não quebrar o contrato com `fuzzDFA`.)
+
+`validateAFDPure` — branches `word_mismatch`/`language_mismatch` ganham campo aditivo:
+```js
+return { ok: false, reason: 'word_mismatch', word, shouldAccept, deadEnd: !accepted ? traceDeadEnd(nodes, transitions, word) : null };
+```
+(mesma ideia para `language_mismatch` com `counterexample.word`). `reason` e `ok` **não mudam** — testes existentes com `toMatchObject` continuam passando.
+
+`AFDPart1.jsx` — novo estado `const [errorNodeIds, setErrorNodeIds] = useState(null)`, propagado para `<CanvasArea errorNodeIds={errorNodeIds} .../>` (prop já suportada por `CanvasArea.jsx:825` via `errorNodeIds?.has(node.id) ? 'node-error'`, hoje não alimentada por `AFDPart1.jsx` — só por `MinDrawStep.jsx`).
+
+Em `validateAFD` (linha 691-704), quando `badWord.deadEnd` existir:
+```js
+setErrorNodeIds(new Set([badWord.deadEnd.nodeId]));
+setTimeout(() => setErrorNodeIds(null), 3000);
+setSimMismatchNote(`"${w}" foi rejeitada — δ incompleta: "${labelOf(deadEnd.nodeId)}" não tem transição para '${deadEnd.symbol}'.`);
+```
+(texto exato acima; quando `deadEnd` for `null`, mensagem atual permanece **idêntica**, sem mudança).
+
+**Payload de highlight**: `errorNodeIds` — `Set<string>` com um único id (`new Set([nodeId])`).
+
+### TDD
+- [ ] **Passo 1 (RED)**: `traceDeadEnd` — testes puros (grafo completo → null; grafo com buraco → `{nodeId,symbol}` certo); testes de `word_mismatch`/`language_mismatch` com `deadEnd` esperado. RED colado.
+- [ ] **Passo 2 (GREEN)**: implementar `traceDeadEnd` + campo `deadEnd`. **Feito:** commit `<hash>`, suíte N/N.
+- [ ] **Passo 3 (GREEN, UI)**: wiring `errorNodeIds`/mensagem em `AFDPart1.jsx`. Evidência via **novo caso** em `e2e/afd1_trace_on_failure.spec.js` (grafo com transição faltando, RED sem o fix → sem `.node-error`/texto "δ incompleta"; GREEN com o fix). **Feito:** commit `<hash>`.
+- [ ] **Passo 4 (REFACTOR)**: `npm test` + `npx playwright test` (specs relevantes) + `npm run lint`. **Feito:** commit `<hash>`.
+
+---
+
+## Item 3 — MT: highlight de não-determinismo no canvas
+
+**Risco: médio** (mexe em `MTCanvas.jsx`, componente compartilhado com MT Reconhecedora).
+
+### Spec (SDD)
+
+Arquivo: `src/modules/mt/MTPart1.jsx` — bloco de não-determinismo (linha ~478-490). Mensagem **inalterada** (já correta, confirmado). Adiciona:
+```js
+const [errorNodeIds, setErrorNodeIds] = useState(null);
+// ...dentro do if de nondeterminismo:
+setErrorNodeIds(new Set([t.from]));
+setTimeout(() => setErrorNodeIds(null), 3000);
+```
+
+Arquivo: `src/modules/mt/components/MTCanvas.jsx` — nova prop `errorNodeIds` (Set|null, default `null`), inserida na composição de classes do nó (linha 789):
+```js
+${errorNodeIds?.has(node.id) ? 'error-pulse-severe' : ''}
+```
+Reaproveita `.node.error-pulse-severe` (já definida em `AFDPart1.css`, já importada por `MTPart1.jsx:7` — **nenhum CSS novo necessário**). Prop opcional e default `null` → `MTReconPart1.jsx` (que também usa `MTCanvas`) não é afetado.
+
+**Payload de highlight**: `errorNodeIds` — `Set<string>` com um único id (`new Set([t.from])`), mesmo formato do Item 2.
+
+### TDD
+Não há lógica pura nova aqui (a detecção do estado/símbolo já existe e está correta) — RED/GREEN só no nível de UI (Vitest roda em `environment:'node'`, sem DOM; a evidência real é e2e, seguindo o precedente de `mt_recon_trace_on_failure.spec.js`/`afd1_trace_on_failure.spec.js`).
+- [ ] **Passo 1 (RED)**: novo `e2e/mt_trans_nondeterminism_highlight.spec.js` — monta MT Transdutora com 2 regras conflitantes no mesmo (estado, símbolo), valida, assere que `.node.error-pulse-severe` **não** aparece (RED, comportamento atual). Rodar e colar a falha.
+- [ ] **Passo 2 (GREEN)**: implementar `errorNodeIds` em `MTPart1.jsx`+`MTCanvas.jsx`. Assere que a classe aparece no nó certo. **Feito:** commit `<hash>`, suíte e2e N/N.
+- [ ] **Passo 3 (REFACTOR)**: rodar `e2e/mt_recon_*` (para confirmar que `MTCanvas.jsx` compartilhado não regrediu no Reconhecedor) + `npm test` + `npm run lint`. **Feito:** commit `<hash>`.
+
+---
+
+## Item 4 — MT Transdutora: trace automático de contraexemplo
+
+**Risco: alto — PARAR antes de começar e pedir confirmação explícita** (`tmAlgorithms.js` não precisa mudar — ver correção acima; o risco está em `MTPart1.jsx`).
+
+### Spec (SDD)
+
+Arquivo: `src/modules/mt/MTPart1.jsx`. Modelo a copiar: `MTReconPart1.jsx` linhas ~88-101 (estado `sim`/`simKey`/`openSim`/`closeSim`) e ~629-653 (abertura pós-falha) — só que a Transdutora não tem nenhum desse estado hoje.
+
+Novos imports: `MTSimPanel` (`./components/MTSimPanel`) + `simulateTMSteps` (já exportada por `./utils/tmAlgorithms`, **sem alterações nela**).
+
+Novo estado:
+```js
+const [sim, setSim] = useState(null);
+const [simKey, setSimKey] = useState(0);
+const openSim  = useCallback((s) => { setSim(s); setSimKey(k => k + 1); }, []);
+const closeSim = useCallback(() => setSim(null), []);
+```
+
+No branch `else` de falha de `validate()` (linha 501-513), após o `showToast`, quando `res.counterexample != null`:
+```js
+const configs = simulateTMSteps(mtGraph, res.counterexample, SIM_MAX_STEPS, level.startMarker ?? null);
+openSim({
+  configs, word: res.counterexample, maxSteps: SIM_MAX_STEPS,
+  title: `Contraexemplo: "${show}"`,
+  message: msg,
+  headRewound: res.reason === 'head-not-rewound' ? false : undefined,
+});
+```
+`reason`s (`loop`/`rejected`/`wrong-output`/`head-not-rewound`) **inalterados** — nenhuma categoria nova.
+
+Render: `{sim && <MTSimPanel key={simKey} configs={sim.configs} word={sim.word} maxSteps={sim.maxSteps} title={sim.title} message={sim.message} headRewound={sim.headRewound} onHighlight={...} onClose={closeSim} />}` — `onHighlight` espelha exatamente o wiring de `simActiveNodeId`/tIdx/seq que `MTReconPart1.jsx` já usa com `MTCanvas`. Posição exata na JSX (relativa às abas "⚙ Linguagem"/"✏ Desenho") fica para ser confirmada no passo RED, lendo a árvore JSX atual de perto nesse momento.
+
+### TDD
+Sem lógica pura nova (tudo reaproveitado) → evidência 100% e2e.
+- [ ] **Passo 1 (RED)**: novo `e2e/mt_trans_trace_on_failure.spec.js`, espelhando `mt_recon_trace_on_failure.spec.js`, com 4 casos (`loop`, `rejected`, `wrong-output`, `head-not-rewound`) — cada um monta uma MT Transdutora propositalmente errada, valida, assere `.sim-panel-container` visível com badge/mensagem certos. RED colado (painel não abre hoje).
+- [ ] **Passo 2 (GREEN)**: wiring completo em `MTPart1.jsx`. **Feito:** commit `<hash>`, suíte e2e N/N.
+- [ ] **Passo 3 (REFACTOR)**: `npm test` + `npx playwright test` completo + `npm run lint`. **Feito:** commit `<hash>`.
+
+---
+
+## Ordem de execução por risco
+
+1. Item 1 (AFD — mensagem)
+2. Item 2 (AFD — δ incompleta como diagnóstico)
+3. Item 3 (MT — highlight de não-determinismo)
+4. **PARAR** → confirmação explícita do usuário
+5. Item 4 (MT Transdutora — trace automático de contraexemplo)
+
+## Fora de escopo
+- Mudar critério de aprovação/reprovação de nível em qualquer módulo (Item 2 é só diagnóstico aditivo, `ok`/`reason` continuam iguais).
+- Mexer em `dfaAlgorithms.js`/`MinDrawStep.jsx` (Minimização) — já é o padrão-ouro, só leitura/referência.
+- Mexer em `usePDAGraph.js`/`pdaAlgorithms.js`/`APPart1.jsx` (AP) — já correto, só referência.
+- Equivalência exata via regex→autômato — decisão já tomada (ADR 0003/bateria+fuzzer), não revisitar.
+- Alterar o comportamento de `MTReconPart1.jsx` (MT Reconhecedora) — qualquer prop nova em `MTCanvas.jsx` deve ser opcional/aditiva para não afetá-lo.

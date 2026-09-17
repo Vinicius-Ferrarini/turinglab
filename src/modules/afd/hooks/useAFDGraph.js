@@ -28,7 +28,7 @@ export function validateAFDPure({ nodes, transitions, testWords = [], currentLev
       .filter(t => t.from === node.id)
       .flatMap(t => t.symbol.split(',').map(s => s.trim()).filter(Boolean));
     if (allSyms.length !== new Set(allSyms).size)
-      return { ok: false, reason: 'nondeterministic' };
+      return { ok: false, reason: 'nondeterministic', nodeId: node.id, symbol: findDuplicateSymbol(node.id, transitions) };
   }
 
   const alphabetSet = new Set(currentLevel?.alphabet || []);
@@ -75,6 +75,22 @@ export function validateAFDPure({ nodes, transitions, testWords = [], currentLev
   }
 
   return { ok: true };
+}
+
+// ─── findDuplicateSymbol: 1º símbolo repetido nas transições de saída de um nó
+// (puro, testável). Usado tanto por validateAFDPure quanto validateAFDSilent
+// pra citar o símbolo exato na mensagem de não-determinismo, em vez de só
+// apontar o nó.
+export function findDuplicateSymbol(nodeId, transitions) {
+  const seen = new Set();
+  for (const t of transitions) {
+    if (t.from !== nodeId) continue;
+    for (const sym of t.symbol.split(',').map(s => s.trim()).filter(Boolean)) {
+      if (seen.has(sym)) return sym;
+      seen.add(sym);
+    }
+  }
+  return null;
 }
 
 // ─── mergeSymbols: merge de símbolos numa transição (puro, testável) ──────────
@@ -143,7 +159,8 @@ export default function useAFDGraph({
         if (showErrors) {
           setHighlightedError(node.id);
           setTimeout(() => setHighlightedError(null), 3000);
-          showToast(`Não determinístico! "${node.label || node.id}" tem símbolo duplicado nas setas.`, 'error');
+          const dupSymbol = findDuplicateSymbol(node.id, transitions);
+          showToast(`Não determinístico! "${node.label || node.id}" tem duas setas para o símbolo '${dupSymbol}'.`, 'error');
         }
         return false;
       }
