@@ -136,9 +136,9 @@ Reaproveita `.node.error-pulse-severe` (já definida em `AFDPart1.css`, já impo
 
 ### TDD
 Não há lógica pura nova aqui (a detecção do estado/símbolo já existe e está correta) — RED/GREEN só no nível de UI (Vitest roda em `environment:'node'`, sem DOM; a evidência real é e2e, seguindo o precedente de `mt_recon_trace_on_failure.spec.js`/`afd1_trace_on_failure.spec.js`).
-- [ ] **Passo 1 (RED)**: novo `e2e/mt_trans_nondeterminism_highlight.spec.js` — monta MT Transdutora com 2 regras conflitantes no mesmo (estado, símbolo), valida, assere que `.node.error-pulse-severe` **não** aparece (RED, comportamento atual). Rodar e colar a falha.
-- [ ] **Passo 2 (GREEN)**: implementar `errorNodeIds` em `MTPart1.jsx`+`MTCanvas.jsx`. Assere que a classe aparece no nó certo. **Feito:** commit `<hash>`, suíte e2e N/N.
-- [ ] **Passo 3 (REFACTOR)**: rodar `e2e/mt_recon_*` (para confirmar que `MTCanvas.jsx` compartilhado não regrediu no Reconhecedor) + `npm test` + `npm run lint`. **Feito:** commit `<hash>`.
+- [x] **Passo 1 (RED)**: novo `e2e/mt_trans_nondeterminism_highlight.spec.js` (fixture via import de `.json`, mesmo padrão de `mt_trans_head_rewind.spec.js` — 2 transições conflitantes em (q0, lendo '0')). RED confirmado: toast com a mensagem certa já aparecia, mas `.error-pulse-severe` nunca aparecia no nó.
+- [x] **Passo 2 (GREEN)**: `errorNodeIds` (Set, default null) implementado em `MTCanvas.jsx` (prop nova, aditiva — não quebra MT Reconhecedora, que não a passa) + `MTPart1.jsx` (estado + `setErrorNodeIds(new Set([t.from]))` no branch de não-determinismo, auto-clear em 3s). **Nota de depuração real**: a 1ª tentativa de wiring teve RED que nunca virava GREEN mesmo após a implementação — rastreei e descobri que eu estava editando o `<APFooterDeck>` (componente do rodapé, que também recebe uma prop `errAction` pré-existente) em vez do `<MTCanvas>` de verdade — os dois `<...>` ficam ~300 linhas distantes no arquivo. Só depois de instrumentar `window.__DEBUG_PROPS__` dentro de `MTCanvas.jsx` e comparar com o valor lido pelo teste é que a causa apareceu. **Feito:** commit `218bb30`, e2e 1/1.
+- [x] **Passo 3 (REFACTOR)**: `npm test` completo — 2143/2143. `npx playwright test` nos specs de MT (Transdutora + Reconhecedora + persistência de sessão de ambos) — 25/25, sem regressão no Reconhecedor (prop nova é opcional). `npm run lint` — 36 warnings antes e depois, nenhum novo. **Feito:** commit `218bb30`.
 
 ---
 
