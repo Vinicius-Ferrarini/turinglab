@@ -175,10 +175,10 @@ openSim({
 Render: `{sim && <MTSimPanel key={simKey} configs={sim.configs} word={sim.word} maxSteps={sim.maxSteps} title={sim.title} message={sim.message} headRewound={sim.headRewound} onHighlight={...} onClose={closeSim} />}` — `onHighlight` espelha exatamente o wiring de `simActiveNodeId`/tIdx/seq que `MTReconPart1.jsx` já usa com `MTCanvas`. Posição exata na JSX (relativa às abas "⚙ Linguagem"/"✏ Desenho") fica para ser confirmada no passo RED, lendo a árvore JSX atual de perto nesse momento.
 
 ### TDD
-Sem lógica pura nova (tudo reaproveitado) → evidência 100% e2e.
-- [ ] **Passo 1 (RED)**: novo `e2e/mt_trans_trace_on_failure.spec.js`, espelhando `mt_recon_trace_on_failure.spec.js`, com 4 casos (`loop`, `rejected`, `wrong-output`, `head-not-rewound`) — cada um monta uma MT Transdutora propositalmente errada, valida, assere `.sim-panel-container` visível com badge/mensagem certos. RED colado (painel não abre hoje).
-- [ ] **Passo 2 (GREEN)**: wiring completo em `MTPart1.jsx`. **Feito:** commit `<hash>`, suíte e2e N/N.
-- [ ] **Passo 3 (REFACTOR)**: `npm test` + `npx playwright test` completo + `npm run lint`. **Feito:** commit `<hash>`.
+Sem lógica pura nova (tudo reaproveitado, `tmAlgorithms.js` intocado como previsto) → evidência 100% e2e.
+- [x] **Passo 1 (RED)**: novo `e2e/mt_trans_trace_on_failure.spec.js`, espelhando `mt_recon_trace_on_failure.spec.js`, com 5 casos (`loop`, `rejected`, `wrong-output`, `head-not-rewound` + 1 caso de falha estrutural provando que o painel NÃO deve abrir nesse caso). RED confirmado: os 4 casos de contraexemplo falharam (`.sim-panel-container` nunca aparecia — timeout), o 5º (estrutural) já passava (comportamento correto preexistente).
+- [x] **Passo 2 (GREEN)**: wiring completo em `MTPart1.jsx` — import de `MTSimPanel`/`simulateTMSteps`, `SIM_MAX_STEPS`, estado `sim`/`simKey`/`simHighlight`/`openSim`/`closeSim`/`handleSimHighlight` (mesmo padrão de `MTReconPart1.jsx`), chamada de `openSim` no branch de falha de `validate()`, `simPanel`/`simPanelClassName` no `<APFooterDeck>` já existente, `simActiveNodeId`/`simActiveTIdx`/`simActiveSeq` no `<MTCanvas>` real. Ajuste durante o GREEN: o caso `head-not-rewound` só mostra o selo dedicado no ÚLTIMO passo do painel (não no passo inicial) — teste corrigido pra avançar o `MTSimPanel` até o fim antes de checar o selo (mesmo padrão de `mt_recon_head_rewind.spec.js`'s `advanceSimToEnd`). **Feito:** commit `19792ff`, e2e 5/5.
+- [x] **Passo 3 (REFACTOR)**: `npm test` completo — 2143/2143. `npx playwright test` em todos os specs de MT (Transdutora + Reconhecedora + persistência de sessão de ambos, 31 specs) — 31/31, sem regressão. `npm run lint` — 36 warnings antes e depois, nenhum novo. **Feito:** commit `19792ff`.
 
 ---
 
