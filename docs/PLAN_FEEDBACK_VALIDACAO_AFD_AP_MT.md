@@ -63,9 +63,9 @@ Não determinístico! "${label}" tem duas setas para o símbolo '${symbol}'.
 Highlight: **inalterado** — `setHighlightedError(node.id)` já destaca o nó certo (confirmado no código); nenhum `errorNodeIds`/Set entra neste item.
 
 ### TDD
-- [ ] **Passo 1 (RED)**: em `src/__tests__/validateAFD.test.js`, novo `describe('findDuplicateSymbol')` com casos (sem duplicata → null; duplicata simples; duplicata em chip multi-símbolo "a,b"); e atualização do teste existente "não-determinismo" para `toMatchObject({ reason:'nondeterministic', nodeId:'q0', symbol:'a' })`. Rodar e colar a falha real.
-- [ ] **Passo 2 (GREEN)**: implementar `findDuplicateSymbol` + atualizar `validateAFDPure`/`validateAFDSilent`. **Feito:** commit `<hash>`, suíte N/N.
-- [ ] **Passo 3 (REFACTOR)**: `npm test` completo (não só o arquivo novo) + `npm run lint` sem warning novo. **Feito:** commit `<hash>`.
+- [x] **Passo 1 (RED)**: em `src/__tests__/validateAFD.test.js`, novo `describe('findDuplicateSymbol')` com casos (sem duplicata → null; duplicata simples; duplicata em chip multi-símbolo "a,b"; duplicata só em outro nó → null); e atualização do teste existente "não-determinismo" para `toMatchObject({ reason:'nondeterministic', nodeId:'q0', symbol:'a' })`. RED confirmado: 5 falhas (`findDuplicateSymbol is not a function` ×4 + `toMatchObject` faltando `nodeId`/`symbol` ×1), 16 passando.
+- [x] **Passo 2 (GREEN)**: implementado `findDuplicateSymbol` em `useAFDGraph.js` + campos `nodeId`/`symbol` em `validateAFDPure` + mensagem atualizada em `validateAFDSilent`. **Feito:** commit `9108302`, suíte do arquivo 21/21.
+- [x] **Passo 3 (REFACTOR)**: `npm test` completo — **2135/2135** (26 arquivos), 0 regressão. `npm run lint` — 36 warnings antes e depois (baseline via `git stash`), nenhum novo. **Feito:** commit `9108302`.
 
 ---
 
