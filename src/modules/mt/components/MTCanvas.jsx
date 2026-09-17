@@ -102,6 +102,10 @@ export default function MTCanvas({
   // iteration-count finito não voltaria a rodar.
   simActiveTIdx = null,
   simActiveSeq = null,
+  // Destaque de não-determinismo (Set<nodeId> | null) — ver MTPart1.jsx
+  // validate(). Reaproveita a classe/animação .error-pulse-severe já trazida
+  // por AFDPart1.css (MTPart1.jsx já importa esse arquivo).
+  errorNodeIds = null,
   selectedNodes = [], setSelectedNodes,
   selectionBox, setSelectionBox,
   guidedLessonStep = null,
@@ -786,7 +790,7 @@ export default function MTCanvas({
               return (
                 <div key={node.uid}
                   data-uid={node.uid}
-                  className={`node ${node.isInitial ? 'initial' : ''} ${node.isFinal ? 'final' : ''} ${selectedNodes.includes(node.uid) ? 'selected' : ''} ${connectingSource === node.uid ? 'selected-source selected' : ''} ${eraseMode ? 'erasable-node' : ''} ${arrowTargetUid === node.uid ? 'arrow-target' : ''}`}
+                  className={`node ${node.isInitial ? 'initial' : ''} ${node.isFinal ? 'final' : ''} ${selectedNodes.includes(node.uid) ? 'selected' : ''} ${connectingSource === node.uid ? 'selected-source selected' : ''} ${eraseMode ? 'erasable-node' : ''} ${arrowTargetUid === node.uid ? 'arrow-target' : ''} ${errorNodeIds?.has(node.id) ? 'error-pulse-severe' : ''}`}
                   style={{
                     top: `${node.y}px`, left: `${node.x}px`, pointerEvents: isDraw ? 'none' : 'auto',
                     ...(isActive ? {

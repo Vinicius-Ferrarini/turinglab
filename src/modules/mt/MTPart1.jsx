@@ -61,6 +61,11 @@ export default function MTPart1({ onBack, progress, updateProgress,
   const [mode,   setMode]   = useState('IDLE');
   const [connectingSource, setConnectingSource] = useState(null);
   const [errAction, setErrAction] = useState(null);
+  // Destaque de não-determinismo no canvas (Set<nodeId>) — errAction só pisca
+  // botão de ferramenta (TOGGLE_INITIAL/TOGGLE_FINAL), não existe mecanismo
+  // pra apontar um NÓ específico até este campo (ver Item 3 de
+  // docs/PLAN_FEEDBACK_VALIDACAO_AFD_AP_MT.md).
+  const [errorNodeIds, setErrorNodeIds] = useState(null);
   const [prof,   setProf]   = useState({ message: '', mood: 'serio' });
   const [simWord, setSimWord]     = useState('');
   const [linguagemTests, setLinguagemTests] = useState([]); // histórico isolado: gabarito estático
@@ -484,6 +489,8 @@ export default function MTPart1({ onBack, progress, updateProgress,
         failAttempt('nondeterministic');
         const lbl = g.nodes.find(n => n.id === t.from)?.label ?? t.from;
         showToast(`O estado ${lbl} tem duas regras diferentes para o símbolo "${sym}" — ajuste antes de validar.`, 'error');
+        setErrorNodeIds(new Set([t.from]));
+        setTimeout(() => setErrorNodeIds(null), 3000);
         return;
       }
       if (!seen.has(key)) seen.set(key, sig);
@@ -840,6 +847,7 @@ export default function MTPart1({ onBack, progress, updateProgress,
           selectionBox={selectionBox}
           setSelectionBox={setSelectionBox}
           guidedLessonStep={lesson.step}
+          errorNodeIds={errorNodeIds}
         />
 
         {/* Painel direito: modo aula ou teste */}
