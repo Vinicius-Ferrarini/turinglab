@@ -96,6 +96,31 @@ export function headRewound(word, tape, head, marker) {
   return head === firstOutputIndex(tape, marker);
 }
 
+// ─── findConflictingTransitionIndices: índices (no array `transitions`) de
+// TODAS as regras de saída de `nodeId` que compartilham (from, read) com
+// destino/escrita/movimento diferentes — mesmo critério de não-determinismo
+// já usado inline em MTPart1.jsx/MTReconPart1.jsx (puro, testável). Usado pra
+// destacar o(s) chip(s) das regras conflitantes no canvas — nunca a seta em
+// si. `read === ''` conta como o símbolo □ (mesma convenção da detecção
+// inline, que usa isso só pra montar a mensagem — aqui é só pra agrupar
+// corretamente regras que leem branco).
+export function findConflictingTransitionIndices(nodeId, transitions) {
+  const seen = new Map(); // key(from|sym) → sig da 1ª regra vista
+  let conflictSym = null;
+  for (const t of transitions) {
+    if (t.from !== nodeId) continue;
+    const sym = t.read === '' ? '□' : t.read;
+    const sig = `${t.to}|${t.write}|${t.move}`;
+    if (seen.has(sym) && seen.get(sym) !== sig) { conflictSym = sym; break; }
+    if (!seen.has(sym)) seen.set(sym, sig);
+  }
+  if (conflictSym == null) return [];
+  return transitions
+    .map((t, idx) => ({ t, idx }))
+    .filter(({ t }) => t.from === nodeId && (t.read === '' ? '□' : t.read) === conflictSym)
+    .map(({ idx }) => idx);
+}
+
 // ── Validador de MT Transdutora ───────────────────────────────────────────────
 // Recebe a MT do aluno e o objeto de nível. Pra cada testWord: (1) a MT tem
 // que terminar em estado final, (2) a fita final (sem □ de borda/marcador)

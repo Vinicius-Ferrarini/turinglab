@@ -106,6 +106,10 @@ export default function MTCanvas({
   // validate(). Reaproveita a classe/animação .error-pulse-severe já trazida
   // por AFDPart1.css (MTPart1.jsx já importa esse arquivo).
   errorNodeIds = null,
+  // Destaque das regras conflitantes (Set<transitionIdx> | null) — mesma
+  // classe genérica .error-pulse-severe, agora no chip da transição (a seta
+  // em si não muda). Compartilhado entre MT Transdutora e Reconhecedora.
+  errorTransitionIndices = null,
   selectedNodes = [], setSelectedNodes,
   selectionBox, setSelectionBox,
   guidedLessonStep = null,
@@ -733,6 +737,7 @@ export default function MTCanvas({
                         onRemove={removeTriple}
                         onEdit={(tIdx) => setEditing({ type: 'edit', tIdx })}
                         isActive={t.tIdx === activeTIdx}
+                        isError={!!errorTransitionIndices?.has(t.tIdx)}
                       />
                     </div>
                   )

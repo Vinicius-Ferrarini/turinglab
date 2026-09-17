@@ -22,7 +22,7 @@ import useCanvasState, { INNER_W, INNER_H } from '../afd/hooks/useCanvasState.js
 import useToast from '../afd/hooks/useToast';
 import usePhaseTelemetry from '../afd/hooks/usePhaseTelemetry';
 import { MT_LEVEL_ORDER, loadMTLevel } from '../../levels_data/mt/index.js';
-import { fuzzTMTransducer, simulateTM, simulateTMSteps, extractTapeOutput, headRewound, BLANK } from './utils/tmAlgorithms';
+import { fuzzTMTransducer, simulateTM, simulateTMSteps, findConflictingTransitionIndices, extractTapeOutput, headRewound, BLANK } from './utils/tmAlgorithms';
 import { validateMTFormalFields, validateMTFormalTransitions } from './utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
@@ -68,6 +68,9 @@ export default function MTPart1({ onBack, progress, updateProgress,
   // pra apontar um NÓ específico até este campo (ver Item 3 de
   // docs/PLAN_FEEDBACK_VALIDACAO_AFD_AP_MT.md).
   const [errorNodeIds, setErrorNodeIds] = useState(null);
+  // Destaque das regras conflitantes (Set<transitionIdx>) — o chip da(s)
+  // regra(s) que colidem pisca, a seta não muda (mesmo padrão do AFD/AP).
+  const [errorTransitionIndices, setErrorTransitionIndices] = useState(null);
   // ── Simulador passo a passo automático (trace-on-failure) ──────────────────
   // sim: { configs, word, title, message, headRewound } | null — mesmo padrão
   // do AP/MT Reconhecedora (openSim/closeSim/sim/simKey). MT Transdutora não
@@ -507,6 +510,8 @@ export default function MTPart1({ onBack, progress, updateProgress,
         showToast(`O estado ${lbl} tem duas regras diferentes para o símbolo "${sym}" — ajuste antes de validar.`, 'error');
         setErrorNodeIds(new Set([t.from]));
         setTimeout(() => setErrorNodeIds(null), 3000);
+        setErrorTransitionIndices(new Set(findConflictingTransitionIndices(t.from, g.transitions)));
+        setTimeout(() => setErrorTransitionIndices(null), 3000);
         return;
       }
       if (!seen.has(key)) seen.set(key, sig);
@@ -876,6 +881,7 @@ export default function MTPart1({ onBack, progress, updateProgress,
           setSelectionBox={setSelectionBox}
           guidedLessonStep={lesson.step}
           errorNodeIds={errorNodeIds}
+          errorTransitionIndices={errorTransitionIndices}
           simActiveNodeId={simHighlight.nodeId}
           simActiveTIdx={simHighlight.tIdx}
           simActiveSeq={simHighlight.seq}

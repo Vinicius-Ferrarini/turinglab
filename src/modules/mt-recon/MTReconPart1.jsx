@@ -29,7 +29,7 @@ import { MT_RECON_LEVEL_ORDER, loadMTReconLevel, getShortestWord, getGabaritoGra
 import { buildNoAttemptHintMessage, buildSizeHintMessage } from '../afd/utils/sizeHint';
 import useWordGuessGame from '../shared/useWordGuessGame';
 import { findSecondShortestWord } from '../shared/wordExercises/findSecondShortestWord';
-import { fuzzTMRecognizer, simulateTM, simulateTMSteps, headRewound } from '../mt/utils/tmAlgorithms';
+import { fuzzTMRecognizer, simulateTM, simulateTMSteps, headRewound, findConflictingTransitionIndices } from '../mt/utils/tmAlgorithms';
 import { validateMTFormalFields, validateMTFormalTransitions } from '../mt/utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
@@ -65,6 +65,12 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
   const [mode,   setMode]   = useState('IDLE');
   const [connectingSource, setConnectingSource] = useState(null);
   const [errAction, setErrAction] = useState(null);
+  // Destaque de não-determinismo no canvas — mesmo padrão da MT Transdutora
+  // (ver docs/PLAN_FEEDBACK_VALIDACAO_AFD_AP_MT.md): errorNodeIds (Set<nodeId>)
+  // destaca o estado, errorTransitionIndices (Set<transitionIdx>) destaca o(s)
+  // chip(s) das regras conflitantes — a seta em si nunca muda.
+  const [errorNodeIds, setErrorNodeIds] = useState(null);
+  const [errorTransitionIndices, setErrorTransitionIndices] = useState(null);
   const [prof,   setProf]   = useState({ message: '', mood: 'serio' });
   const [simWord, setSimWord] = useState('');
   const [testedWords, setTestedWords] = useState([]);
@@ -613,6 +619,10 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
         failAttempt('nondeterministic');
         const lbl = g.nodes.find(n => n.id === t.from)?.label ?? t.from;
         showToast(`O estado ${lbl} tem duas regras diferentes para o símbolo "${sym}" — ajuste antes de validar.`, 'error');
+        setErrorNodeIds(new Set([t.from]));
+        setTimeout(() => setErrorNodeIds(null), 3000);
+        setErrorTransitionIndices(new Set(findConflictingTransitionIndices(t.from, g.transitions)));
+        setTimeout(() => setErrorTransitionIndices(null), 3000);
         return;
       }
       if (!seen.has(key)) seen.set(key, sig);
@@ -995,6 +1005,8 @@ export default function MTReconPart1({ onBack, progress, updateProgress,
           selectionBox={selectionBox}
           setSelectionBox={setSelectionBox}
           guidedLessonStep={lesson.step}
+          errorNodeIds={errorNodeIds}
+          errorTransitionIndices={errorTransitionIndices}
           isDrawingUnlocked={isDrawingUnlocked}
           wordleGame={wordleGame}
           effectiveShortestWord={effectiveShortestWord}

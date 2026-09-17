@@ -13,7 +13,7 @@ import './MTTransitions.css';
 
 const show = (v) => (v === '' || v == null ? BLANK : v);
 
-function TMTransitionLabel({ transition, style, eraseMode, lessonActive, onRemove, onEdit, isActive }) {
+function TMTransitionLabel({ transition, style, eraseMode, lessonActive, onRemove, onEdit, isActive, isError }) {
   const tIdx = transition.tIdx;
   const handleClick = useCallback((e) => {
     e.stopPropagation();
@@ -23,7 +23,7 @@ function TMTransitionLabel({ transition, style, eraseMode, lessonActive, onRemov
 
   return (
     <div
-      className={`tm-transition-label${eraseMode ? ' erasable' : ''}${isActive ? ' active-transition' : ''}`}
+      className={`tm-transition-label${eraseMode ? ' erasable' : ''}${isActive ? ' active-transition' : ''}${isError ? ' error-pulse-severe' : ''}`}
       style={style}
       onClick={handleClick}
       title={eraseMode ? 'Clique para remover' : 'Clique para editar'}

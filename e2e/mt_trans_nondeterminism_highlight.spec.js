@@ -73,3 +73,28 @@ test('MT Transdutora: não-determinismo destaca o estado certo no canvas (errorN
   await expect(nodes.nth(0)).toHaveClass(/error-pulse-severe/);
   await expect(nodes.nth(1)).not.toHaveClass(/error-pulse-severe/);
 });
+
+test('MT Transdutora: não-determinismo destaca as DUAS regras conflitantes (chip da transição)', async ({ page }) => {
+  const filePath = path.join(os.tmpdir(), `mt_trans_nondeterminism_tr_${Date.now()}.json`);
+  fs.writeFileSync(filePath, JSON.stringify(buildSnapshot()));
+
+  await goToMTTrans(page);
+  await page.locator('.menu-btn.primary', { hasText: 'L16' }).click();
+  await page.locator('canvas, svg').first().waitFor({ timeout: 8000 });
+
+  await page.locator('input[type="file"]').setInputFiles(filePath);
+  await expect(page.locator('.toast-notification.success')).toContainText(/importada/i);
+  await expect(page.locator('.canvas-inner .node')).toHaveCount(2);
+  fs.unlinkSync(filePath);
+
+  await page.getByRole('button', { name: /Validar MT/i }).click();
+  await expect(page.locator('.toast-notification.error')).toBeVisible({ timeout: 4000 });
+
+  // As DUAS regras (q0→q1 e o auto-loop q0→q0) conflitam entre si — os 2
+  // chips piscam, a seta em si não muda (sem asserção de cor na linha, que
+  // nunca teve classe de erro pra começo de conversa).
+  const labels = page.locator('.tm-transition-label');
+  await expect(labels).toHaveCount(2);
+  await expect(labels.nth(0)).toHaveClass(/error-pulse-severe/);
+  await expect(labels.nth(1)).toHaveClass(/error-pulse-severe/);
+});
