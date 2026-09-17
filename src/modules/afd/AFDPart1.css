@@ -911,3 +911,11 @@ body { color: var(--text-main); }
 .node.error-pulse-severe {
   animation: nodeSeverePulse 0.8s infinite !important;
 }
+/* Destaque de δ incompleta (Set<nodeId> via prop errorNodeIds — ver
+   AFDPart1.jsx validateAFD/badWord.deadEnd). Reaproveita a mesma animação de
+   pulso acima; existe como classe própria (em vez de reusar
+   .error-pulse-severe direto) porque o payload é um Set (múltiplos nós
+   possíveis), diferente de highlightedError (um único id). */
+.node.node-error {
+  animation: nodeSeverePulse 0.8s infinite !important;
+}

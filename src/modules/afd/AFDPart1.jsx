@@ -158,6 +158,11 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
   const innerCanvasRef = useRef(null);
 
   const [highlightedError, setHighlightedError] = useState(null);
+  // Destaque de δ incompleta (Set<nodeId>) — ver validateAFD/badWord.deadEnd
+  // abaixo. Separado de highlightedError (string única, outros erros
+  // estruturais) porque CanvasArea já suporta esse formato (Set) desde a
+  // Minimização (MinDrawStep.jsx) — só não era alimentado aqui ainda.
+  const [errorNodeIds, setErrorNodeIds] = useState(null);
   const [professorMessage, setProfessorMessage] = useState('');
   const [showVictoryScreen, setShowVictoryScreen]     = useState(false);
   const [showImpossibleScreen, setShowImpossibleScreen] = useState(false);
@@ -668,7 +673,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
       errorSinceTutorialRef.current = true; // validação falha quebra "sem erro desde a ajuda"
       // Telemetria: reusa validateAFDPure (gêmea pura, mesma ordem de checagens)
       // só para extrair o motivo estruturado — validateAFDSilent não é alterada.
-      const { reason, word: mismatchWord, shouldAccept, counterexample } =
+      const { reason, word: mismatchWord, shouldAccept, counterexample, deadEnd } =
         validateAFDPure({ nodes, transitions, testWords, currentLevel });
       logEvent({
         tipo_evento: 'tentativa',
@@ -689,16 +694,28 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
       // nondeterministic, invalid_symbol) seguem só com o toast de
       // validateAFDSilent — não há palavra específica pra mostrar.
       const badWord =
-        reason === 'word_mismatch'      ? { word: mismatchWord, shouldAccept }
-        : reason === 'language_mismatch' ? counterexample
+        reason === 'word_mismatch'      ? { word: mismatchWord, shouldAccept, deadEnd }
+        : reason === 'language_mismatch' ? counterexample // já carrega .deadEnd (ver validateAFDPure)
         : null;
       if (badWord?.word != null) {
         const w = badWord.word === '' ? 'λ' : badWord.word;
-        setSimMismatchNote(
-          badWord.shouldAccept
-            ? `"${w}" foi rejeitada — deveria ser aceita`
-            : `"${w}" foi aceita — deveria ser rejeitada`
-        );
+        // δ incompleta (badWord.deadEnd): em vez da nota genérica de
+        // rejeitada/aceita, cita o estado e o símbolo exatos onde a δ não tem
+        // transição — e destaca esse nó no canvas (errorNodeIds, Set — mesmo
+        // formato usado pela Minimização em MinDrawStep.jsx).
+        if (badWord.deadEnd) {
+          const { nodeId, symbol } = badWord.deadEnd;
+          const label = nodes.find(n => n.id === nodeId)?.label ?? nodeId;
+          setSimMismatchNote(`"${w}" foi rejeitada — δ incompleta: "${label}" não tem transição para '${symbol}'.`);
+          setErrorNodeIds(new Set([nodeId]));
+          setTimeout(() => setErrorNodeIds(null), 3000);
+        } else {
+          setSimMismatchNote(
+            badWord.shouldAccept
+              ? `"${w}" foi rejeitada — deveria ser aceita`
+              : `"${w}" foi aceita — deveria ser rejeitada`
+          );
+        }
         setSimWord(badWord.word);
         setShowSimPanel(true);
       }
@@ -907,6 +924,7 @@ export default function AFDPart1({ onBack, progress, updateProgress, forceLevelI
           selectedSymbolCard={selectedSymbolCard}
           transitionRenders={transitionRenders}
           highlightedError={highlightedError}
+          errorNodeIds={errorNodeIds}
           handleTransitionLineClick={handleTransitionLineClick}
           transitionLabelRefs={transitionLabelRefs}
           handleAddSymbol={handleAddSymbol}

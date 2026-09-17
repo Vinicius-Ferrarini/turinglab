@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAFDPure, findDuplicateSymbol } from '../modules/afd/hooks/useAFDGraph.js';
+import { validateAFDPure, findDuplicateSymbol, traceDeadEnd } from '../modules/afd/hooks/useAFDGraph.js';
 
 // ─── Grafo base: q0 -a-> q1(final), q0 -b-> q0 ──────────────────────────────
 // Reconhece b*a  (pelo menos um 'a' no final, precedido de qualquer qtd de 'b')
@@ -98,6 +98,31 @@ describe('validateAFDPure — testWords', () => {
       .toMatchObject({ ok: false, reason: 'word_mismatch' });
   });
 
+  it('rejeição por terminar em estado não-final (SEM buraco de transição) → deadEnd: null', () => {
+    // 'b' em BASE_TRANS: q0 -b-> q0 (transição existe, só não é final) — não é δ incompleta.
+    const testWords = [{ word: 'b', status: 'correct' }];
+    expect(validateAFDPure({ nodes: BASE_NODES, transitions: BASE_TRANS, testWords }))
+      .toMatchObject({ ok: false, reason: 'word_mismatch', deadEnd: null });
+  });
+
+  it('rejeição indevida por aceitação (accepted=true, shouldAccept=false) → deadEnd: null', () => {
+    const testWords = [{ word: 'a', status: 'wrong' }];
+    expect(validateAFDPure({ nodes: BASE_NODES, transitions: BASE_TRANS, testWords }))
+      .toMatchObject({ ok: false, reason: 'word_mismatch', deadEnd: null });
+  });
+
+  it('rejeição por δ incompleta (buraco de transição real) → deadEnd cita o estado e símbolo certos', () => {
+    // q0 -a-> q1(final); SEM transição de q1 para 'b' — palavra "ab" trava em q1.
+    const nodes = [
+      { id: 'q0', isInitial: true,  isFinal: false },
+      { id: 'q1', isInitial: false, isFinal: true  },
+    ];
+    const trans = [{ from: 'q0', to: 'q1', symbol: 'a' }];
+    const testWords = [{ word: 'ab', status: 'correct' }];
+    expect(validateAFDPure({ nodes, transitions: trans, testWords }))
+      .toMatchObject({ ok: false, reason: 'word_mismatch', deadEnd: { nodeId: 'q1', symbol: 'b' } });
+  });
+
 });
 
 // ─── Suite 3: equivalência de linguagem (fuzzer) ─────────────────────────────
@@ -155,6 +180,20 @@ describe('validateAFDPure — equivalência de linguagem', () => {
     expect(result.counterexample).toBeDefined();
   });
 
+  it('contraexemplo por δ incompleta → counterexample.deadEnd cita o estado e símbolo certos', () => {
+    // q0 -a-> q1(final); sem transição 'b' em q0. Linguagem = {"a","b"}.
+    const nodes = [
+      { id: 'q0', isInitial: true,  isFinal: false },
+      { id: 'q1', isInitial: false, isFinal: true  },
+    ];
+    const trans = [{ from: 'q0', to: 'q1', symbol: 'a' }];
+    const level = { alphabet: ['a', 'b'], regex: /^(a|b)$/ };
+    const result = validateAFDPure({ nodes, transitions: trans, currentLevel: level });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('language_mismatch');
+    expect(result.counterexample).toMatchObject({ word: 'b', deadEnd: { nodeId: 'q0', symbol: 'b' } });
+  });
+
 });
 
 // ─── Suite 4: sem nível definido ──────────────────────────────────────────────
@@ -207,6 +246,33 @@ describe('findDuplicateSymbol', () => {
       { from: 'q1', to: 'q0', symbol: 'a' }, // duplicado em q1, não em q0
     ];
     expect(findDuplicateSymbol('q0', trans)).toBeNull();
+  });
+
+});
+
+// ─── Suite 6: traceDeadEnd (função pura) ─────────────────────────────────────
+describe('traceDeadEnd', () => {
+
+  it('percurso completo (sem buraco) → null, mesmo terminando em estado não-final', () => {
+    expect(traceDeadEnd(BASE_NODES, BASE_TRANS, 'b')).toBeNull();
+  });
+
+  it('percurso com buraco de transição → { nodeId, symbol } do ponto exato da travada', () => {
+    const nodes = [
+      { id: 'q0', isInitial: true,  isFinal: false },
+      { id: 'q1', isInitial: false, isFinal: true  },
+    ];
+    const trans = [{ from: 'q0', to: 'q1', symbol: 'a' }];
+    expect(traceDeadEnd(nodes, trans, 'ab')).toEqual({ nodeId: 'q1', symbol: 'b' });
+  });
+
+  it('palavra vazia (λ) sem buraco → null', () => {
+    expect(traceDeadEnd(BASE_NODES, BASE_TRANS, 'λ')).toBeNull();
+  });
+
+  it('sem estado inicial → null', () => {
+    const nodes = BASE_NODES.map(n => ({ ...n, isInitial: false }));
+    expect(traceDeadEnd(nodes, BASE_TRANS, 'a')).toBeNull();
   });
 
 });

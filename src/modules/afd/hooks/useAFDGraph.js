@@ -61,7 +61,13 @@ export function validateAFDPure({ nodes, transitions, testWords = [], currentLev
     const accepted     = simulateDFA(tw.word);
     const shouldAccept = tw.status === 'shortest' || tw.status === 'correct';
     if (accepted !== shouldAccept)
-      return { ok: false, reason: 'word_mismatch', word: tw.word, shouldAccept };
+      return {
+        ok: false, reason: 'word_mismatch', word: tw.word, shouldAccept,
+        // deadEnd só é calculado quando a rejeição foi indevida (accepted===false) —
+        // se o grafo ACEITOU quando não devia, não há "buraco" de transição a
+        // apontar, o percurso terminou normalmente num estado errado.
+        deadEnd: !accepted ? traceDeadEnd(nodes, transitions, tw.word) : null,
+      };
   }
 
   if (currentLevel?.regex || typeof currentLevel?.validate === 'function') {
@@ -71,7 +77,13 @@ export function validateAFDPure({ nodes, transitions, testWords = [], currentLev
     };
     const ce = fuzzDFA(currentLevel.alphabet, lvlFn, simulateDFA);
     if (ce !== null)
-      return { ok: false, reason: 'language_mismatch', counterexample: ce };
+      // ce.shouldAccept: true → a linguagem aceita mas o grafo do aluno rejeitou
+      // (accepted===false do lado do aluno) → pode ser δ incompleta. false → o
+      // grafo aceitou quando não devia → não há buraco a apontar.
+      return {
+        ok: false, reason: 'language_mismatch',
+        counterexample: { ...ce, deadEnd: ce.shouldAccept ? traceDeadEnd(nodes, transitions, ce.word) : null },
+      };
   }
 
   return { ok: true };
@@ -89,6 +101,25 @@ export function findDuplicateSymbol(nodeId, transitions) {
       if (seen.has(sym)) return sym;
       seen.add(sym);
     }
+  }
+  return null;
+}
+
+// ─── traceDeadEnd: percorre `word` a partir do estado inicial e devolve o
+// (estado, símbolo) exatos onde a δ não tem transição definida — δ incompleta
+// (puro, testável). Devolve null quando o percurso completa (mesmo terminando
+// num estado não-final — isso é rejeição normal, não buraco de transição).
+// Implementação isolada de propósito: NÃO reaproveita/altera o simulateDFA
+// interno de validateAFDPure/validateAFDSilent, que precisa continuar
+// devolvendo um booleano puro (contrato de predicado do fuzzDFA).
+export function traceDeadEnd(nodes, transitions, word) {
+  let cur = nodes.find(n => n.isInitial)?.id;
+  if (!cur) return null;
+  const w = word === 'λ' ? '' : word;
+  for (const ch of w) {
+    const tr = transitions.find(t => t.from === cur && t.symbol.split(',').map(s => s.trim()).includes(ch));
+    if (!tr) return { nodeId: cur, symbol: ch };
+    cur = tr.to;
   }
   return null;
 }

@@ -77,7 +77,13 @@ test.describe('AFD_1 — simulação abre sozinha na palavra que falhou', () => 
     const note = sim.locator('.sim-mismatch-badge');
     await expect(note).toBeVisible();
     await expect(note).toContainText('aa');
-    await expect(note).toContainText(/rejeitada.*deveria ser aceita/i);
+    // q1 (final) não tem NENHUMA transição de saída → "aa" trava em q1 lendo
+    // 'a' — δ incompleta de verdade, não só "estado errado no final". A nota
+    // cita o estado e o símbolo exatos (ver Item 2 de
+    // docs/PLAN_FEEDBACK_VALIDACAO_AFD_AP_MT.md), e o nó ganha destaque.
+    await expect(note).toContainText(/δ incompleta.*"q1".*não tem transição para 'a'/i);
+    const nodes = page.locator('.canvas-inner .node');
+    await expect(nodes.nth(1)).toHaveClass(/node-error/);
 
     // Começa no passo 1 (rastro do começo), NÃO no passo do erro.
     await expect(sim.locator('.sim-progress')).toHaveText('1 / 3');
@@ -86,7 +92,7 @@ test.describe('AFD_1 — simulação abre sozinha na palavra que falhou', () => 
     await expect(step).not.toHaveClass(/error/);
   });
 
-  test('word_mismatch (palavra testada): abre o SimPanel com aviso, no passo 1', async ({ page }) => {
+  test('word_mismatch (palavra testada) por δ incompleta: mesma nota/highlight, no passo 1', async ({ page }) => {
     const { wordInput } = await unlockAndBuildWrongAFD(page);
 
     // O aluno testa "aa" — a linguagem aceita, entra como "✓ aceita".
@@ -98,7 +104,9 @@ test.describe('AFD_1 — simulação abre sozinha na palavra que falhou', () => 
 
     const sim = page.locator('.sim-panel-container');
     await expect(sim).toBeVisible({ timeout: 4000 });
-    await expect(sim.locator('.sim-mismatch-badge')).toContainText(/rejeitada.*deveria ser aceita/i);
+    await expect(sim.locator('.sim-mismatch-badge')).toContainText(/δ incompleta.*"q1".*não tem transição para 'a'/i);
+    const nodes = page.locator('.canvas-inner .node');
+    await expect(nodes.nth(1)).toHaveClass(/node-error/);
     await expect(sim.locator('.sim-progress')).toHaveText('1 / 3');
     await expect(sim.locator('.sim-panel-body .sim-current-step')).toContainText(/Início em/i);
   });
