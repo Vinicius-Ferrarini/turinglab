@@ -105,10 +105,10 @@ setSimMismatchNote(`"${w}" foi rejeitada — δ incompleta: "${labelOf(deadEnd.n
 **Payload de highlight**: `errorNodeIds` — `Set<string>` com um único id (`new Set([nodeId])`).
 
 ### TDD
-- [ ] **Passo 1 (RED)**: `traceDeadEnd` — testes puros (grafo completo → null; grafo com buraco → `{nodeId,symbol}` certo); testes de `word_mismatch`/`language_mismatch` com `deadEnd` esperado. RED colado.
-- [ ] **Passo 2 (GREEN)**: implementar `traceDeadEnd` + campo `deadEnd`. **Feito:** commit `<hash>`, suíte N/N.
-- [ ] **Passo 3 (GREEN, UI)**: wiring `errorNodeIds`/mensagem em `AFDPart1.jsx`. Evidência via **novo caso** em `e2e/afd1_trace_on_failure.spec.js` (grafo com transição faltando, RED sem o fix → sem `.node-error`/texto "δ incompleta"; GREEN com o fix). **Feito:** commit `<hash>`.
-- [ ] **Passo 4 (REFACTOR)**: `npm test` + `npx playwright test` (specs relevantes) + `npm run lint`. **Feito:** commit `<hash>`.
+- [x] **Passo 1 (RED)**: `traceDeadEnd` — 4 testes puros (percurso completo sem buraco → null mesmo terminando não-final; buraco real → `{nodeId,symbol}`; λ sem buraco → null; sem estado inicial → null); + 3 testes de `word_mismatch`/`language_mismatch` com `deadEnd` esperado (`null` nos 2 casos sem buraco real, objeto nos 2 casos com buraco real). RED confirmado: 8 falhas (`traceDeadEnd is not a function` ×4 + `deadEnd` ausente do `toMatchObject` ×4), 21 passando.
+- [x] **Passo 2 (GREEN)**: implementado `traceDeadEnd` + campo `deadEnd` em `word_mismatch`/`language_mismatch`. **Feito:** commit `409912b`, suíte do arquivo 29/29; suíte completa 2143/2143 (0 regressão nos testes puros existentes).
+- [x] **Passo 3 (GREEN, UI)**: wiring `errorNodeIds`/mensagem em `AFDPart1.jsx` + regra `.node.node-error` em `AFDPart1.css`. Evidência via 2 casos consolidados em `e2e/afd1_trace_on_failure.spec.js` — RED genuíno obtido revertendo temporariamente (`git stash`) só o wiring de UI e rodando o e2e (2 falhas reais: nota ainda genérica, sem `.node-error`); GREEN após `git stash pop`. Efeito colateral descoberto no processo: o fixture `unlockAndBuildWrongAFD` já tinha um buraco de δ real (q1 sem saída) — os 2 testes ORIGINAIS desse arquivo passaram a receber a mensagem mais específica em vez da genérica (comportamento correto, não regressão), então suas asserções foram atualizadas em vez de duplicadas em testes novos. **Feito:** commit `409912b`, e2e 3/3 (arquivo) + 23/23 (afd1_flow/afd1_erase_symbol/session_persistence_afd1, sem regressão).
+- [x] **Passo 4 (REFACTOR)**: `npm test` completo — 2143/2143. `npm run lint` — 36 warnings antes e depois, nenhum novo. **Feito:** commit `409912b`.
 
 ---
 
