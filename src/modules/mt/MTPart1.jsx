@@ -13,6 +13,7 @@ import LevelGridScreen from '../afd/components/LevelGridScreen';
 import EndScreen from '../afd/components/EndScreen';
 import GameHeader from '../afd/components/GameHeader';
 import MTCanvas from './components/MTCanvas';
+import MTSimPanel from './components/MTSimPanel';
 import APFooterDeck from '../ap/components/APFooterDeck';
 import useTMGraph from './hooks/useTMGraph';
 import useMTGuidedLesson from './hooks/useMTGuidedLesson';
@@ -21,7 +22,7 @@ import useCanvasState, { INNER_W, INNER_H } from '../afd/hooks/useCanvasState.js
 import useToast from '../afd/hooks/useToast';
 import usePhaseTelemetry from '../afd/hooks/usePhaseTelemetry';
 import { MT_LEVEL_ORDER, loadMTLevel } from '../../levels_data/mt/index.js';
-import { fuzzTMTransducer, simulateTM, extractTapeOutput, headRewound, BLANK } from './utils/tmAlgorithms';
+import { fuzzTMTransducer, simulateTM, simulateTMSteps, extractTapeOutput, headRewound, BLANK } from './utils/tmAlgorithms';
 import { validateMTFormalFields, validateMTFormalTransitions } from './utils/mtFormalValidation';
 import { onBracketKeyDown } from '../afd/utils/bracketAutoClose';
 import { DIFF_COLOR } from '../../levels';
@@ -35,6 +36,7 @@ import useLevelSessionPersistence, { readLevelSession } from '../shared/persiste
 // Estado inicial vazio do formulário da descrição formal (7-tupla)
 // deltaCells: mapa "estado|símbolo" → "destino, escreve, move" (matriz δ)
 const EMPTY_FORMAL = { states: '', sigma: '', gamma: '', initial: '', blank: '', final: '', deltaCells: {} };
+const SIM_MAX_STEPS = 500;
 
 export default function MTPart1({ onBack, progress, updateProgress,
   forceLevelId, forceLevelLabel, onForcedPrev, onForcedNext, forceLabelColor }) {
@@ -66,6 +68,20 @@ export default function MTPart1({ onBack, progress, updateProgress,
   // pra apontar um NÓ específico até este campo (ver Item 3 de
   // docs/PLAN_FEEDBACK_VALIDACAO_AFD_AP_MT.md).
   const [errorNodeIds, setErrorNodeIds] = useState(null);
+  // ── Simulador passo a passo automático (trace-on-failure) ──────────────────
+  // sim: { configs, word, title, message, headRewound } | null — mesmo padrão
+  // do AP/MT Reconhecedora (openSim/closeSim/sim/simKey). MT Transdutora não
+  // tinha NENHUM wiring de MTSimPanel até este item (ver Item 4 de
+  // docs/PLAN_FEEDBACK_VALIDACAO_AFD_AP_MT.md) — diferente do Reconhecedor,
+  // aqui só é usado para abrir automaticamente na palavra que reprovou
+  // "✓ Validar MT" (sem botão "🔬 Simular" manual, que este módulo não tem).
+  const [sim, setSim] = useState(null);
+  const [simKey, setSimKey] = useState(0);
+  const [simHighlight, setSimHighlight] = useState({ nodeId: null, type: null, tIdx: null, seq: 0 });
+  const openSim  = useCallback((s) => { setSim(s); setSimKey(k => k + 1); }, []);
+  const closeSim = useCallback(() => { setSim(null); setSimHighlight({ nodeId: null, type: null, tIdx: null, seq: 0 }); }, []);
+  const handleSimHighlight = useCallback((nodeId, type, tIdx) =>
+    setSimHighlight(prev => ({ nodeId, type, tIdx: tIdx ?? null, seq: prev.seq + 1 })), []);
   const [prof,   setProf]   = useState({ message: '', mood: 'serio' });
   const [simWord, setSimWord]     = useState('');
   const [linguagemTests, setLinguagemTests] = useState([]); // histórico isolado: gabarito estático
@@ -518,8 +534,20 @@ export default function MTPart1({ onBack, progress, updateProgress,
       // Erro fica só no balão vermelho do painel lateral (result.*) — o
       // Maurílio não comenta erros, só sucesso/dicas.
       showToast?.(msg, 'error');
+      // Além do toast: abre o MTSimPanel já simulando o contraexemplo contra a
+      // MT do ALUNO (mesmo espírito do trace-on-failure do AFD/AP/MT
+      // Reconhecedora — ver ADR 0010 e mt_recon_trace_on_failure.spec.js).
+      // Sempre há palavra concreta aqui (res.counterexample nunca é null pra
+      // nenhum dos 4 motivos de fuzzTMTransducer — diferente do Reconhecedor,
+      // que também tem motivos sem contraexemplo).
+      const configs = simulateTMSteps(mtGraph, res.counterexample, SIM_MAX_STEPS, level.startMarker ?? null);
+      openSim({
+        configs, word: res.counterexample, maxSteps: SIM_MAX_STEPS,
+        title: `Falhou em "${show}"`, message: msg,
+        headRewound: res.reason === 'head-not-rewound' ? false : null,
+      });
     }
-  }, [level, g, say, updateProgress, showToast, phaseExtras]);
+  }, [level, g, say, updateProgress, showToast, phaseExtras, openSim]);
 
   // Valida a Descrição Formal preenchida — mesmo padrão de 2 etapas do
   // AFD/AP: 1ª chamada valida os 6 campos da tupla (Q,Σ,Γ,q₀,□,F) contra o
@@ -848,6 +876,9 @@ export default function MTPart1({ onBack, progress, updateProgress,
           setSelectionBox={setSelectionBox}
           guidedLessonStep={lesson.step}
           errorNodeIds={errorNodeIds}
+          simActiveNodeId={simHighlight.nodeId}
+          simActiveTIdx={simHighlight.tIdx}
+          simActiveSeq={simHighlight.seq}
         />
 
         {/* Painel direito: modo aula ou teste */}
@@ -1151,6 +1182,12 @@ export default function MTPart1({ onBack, progress, updateProgress,
         tapeHead={lesson.cur?.head ?? 0}
         errAction={errAction}
         compactWhenLesson
+        simPanel={sim && (
+          <MTSimPanel key={simKey} configs={sim.configs} word={sim.word} maxSteps={sim.maxSteps}
+            title={sim.title} message={sim.message} headRewound={sim.headRewound}
+            onHighlight={handleSimHighlight} onClose={closeSim} />
+        )}
+        simPanelClassName="mt-simp-footer"
       />
 
       {victory && (
