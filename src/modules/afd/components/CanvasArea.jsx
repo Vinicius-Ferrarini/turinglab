@@ -7,7 +7,7 @@ import TransitionLabel from './TransitionLabel';
 import StrokeEl from './StrokeEl';
 import GuidedLessonOverlay from '../GuidedLessonOverlay';
 import NodeContextMenu from './NodeContextMenu';
-import { DRAW_COLORS } from '../hooks/useDrawing';
+import { DRAW_COLORS, strokeNearPoint } from '../hooks/useDrawing';
 import imgMaurilioApontando from '../../../assets/maurilio2_apontando_pro_lado.webp';
 import imgBalaoFala         from '../../../assets/balao_fala_redondo.webp';
 import WordleBoard from './WordleBoard';
@@ -380,9 +380,7 @@ export default function CanvasArea({
       if (isErasing) {
         const ERASE_R = 20;
         setDrawings(prev => {
-          const next = prev.filter(s =>
-            !s.points.some(p => Math.hypot(p.x - ix, p.y - iy) < ERASE_R)
-          );
+          const next = prev.filter(s => !strokeNearPoint(s, ix, iy, ERASE_R));
           drawingsRef.current = next;
           return next;
         });

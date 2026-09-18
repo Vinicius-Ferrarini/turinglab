@@ -13,6 +13,21 @@ export const DRAW_COLORS = [
   { hex: '#f8f8f8', label: 'Branco' },
 ];
 
+// ─── strokeNearPoint: testa se um clique (x,y) está a até `radius` px de um
+// traço — usado pela borracha (clique apaga o traço mais próximo). Puro,
+// testável. Traços 'pencil' (ou sem `type` — traços legados, de antes do
+// campo existir) guardam uma lista de pontos e são testados ponto a ponto;
+// formas (line/arrow/rect) guardam só x1/y1/x2/y2 (sem `points`) e são
+// testadas pelas duas pontas + o meio do segmento.
+export function strokeNearPoint(stroke, x, y, radius) {
+  if (stroke.type === 'pencil' || !stroke.type)
+    return stroke.points.some(p => Math.hypot(p.x - x, p.y - y) < radius);
+  const mx = (stroke.x1 + stroke.x2) / 2, my = (stroke.y1 + stroke.y2) / 2;
+  return Math.hypot(stroke.x1 - x, stroke.y1 - y) < radius
+    || Math.hypot(stroke.x2 - x, stroke.y2 - y) < radius
+    || Math.hypot(mx - x, my - y) < radius;
+}
+
 export default function useDrawing({ cssZoomCompensation = true } = {}) {
   const [drawings, setDrawings]           = useState([]);
   const [drawingStack, setDrawingStack]   = useState([]);
@@ -90,12 +105,7 @@ export default function useDrawing({ cssZoomCompensation = true } = {}) {
     if (isErasing) {
       const R = 20;
       setDrawings(prev => {
-        const next = prev.filter(s => {
-          if (s.type === 'pencil' || !s.type)
-            return !s.points.some(p => Math.hypot(p.x - x, p.y - y) < R);
-          const mx = (s.x1 + s.x2) / 2, my = (s.y1 + s.y2) / 2;
-          return !(Math.hypot(s.x1 - x, s.y1 - y) < R || Math.hypot(s.x2 - x, s.y2 - y) < R || Math.hypot(mx - x, my - y) < R);
-        });
+        const next = prev.filter(s => !strokeNearPoint(s, x, y, R));
         drawingsRef.current = next;
         return next;
       });
