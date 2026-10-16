@@ -1,0 +1,752 @@
+{
+  "_APFooterDeck-CggimBmh.css": {
+    "file": "assets/APFooterDeck-CggimBmh.css",
+    "src": "_APFooterDeck-CggimBmh.css"
+  },
+  "_APFooterDeck-D9ZqzvAi.js": {
+    "file": "assets/APFooterDeck-D9ZqzvAi.js",
+    "name": "APFooterDeck",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_exportImportFile-DDTxp6N1.js",
+      "_useCanvasState-Dy2rd3lO.js"
+    ],
+    "css": [
+      "assets/APFooterDeck-CggimBmh.css"
+    ]
+  },
+  "_BlackboardPanel-BIGXFr-x.js": {
+    "file": "assets/BlackboardPanel-BIGXFr-x.js",
+    "name": "BlackboardPanel",
+    "css": [
+      "assets/BlackboardPanel-CXqL_tuZ.css"
+    ]
+  },
+  "_BlackboardPanel-CXqL_tuZ.css": {
+    "file": "assets/BlackboardPanel-CXqL_tuZ.css",
+    "src": "_BlackboardPanel-CXqL_tuZ.css"
+  },
+  "_BossMode-BLYwDqME.js": {
+    "file": "assets/BossMode-BLYwDqME.js",
+    "name": "BossMode",
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_LevelGridScreen-CetBCvGD.js"
+    ],
+    "dynamicImports": [
+      "src/modules/afd/AFDPart1.jsx",
+      "src/modules/afd/AFDPart2.jsx",
+      "src/modules/afd/AFDMinimizer.jsx",
+      "src/modules/ap/APPart1.jsx",
+      "src/modules/mt-recon/MTReconPart1.jsx",
+      "src/modules/mt/MTPart1.jsx"
+    ]
+  },
+  "_GraphView-CS3srcoY.js": {
+    "file": "assets/GraphView-CS3srcoY.js",
+    "name": "GraphView",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ]
+  },
+  "_LevelGridScreen-CetBCvGD.js": {
+    "file": "assets/LevelGridScreen-CetBCvGD.js",
+    "name": "LevelGridScreen",
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js"
+    ]
+  },
+  "_SimPanel-D8VeaPRc.js": {
+    "file": "assets/SimPanel-D8VeaPRc.js",
+    "name": "SimPanel",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ]
+  },
+  "_TestPanel-BlgbNsLm.css": {
+    "file": "assets/TestPanel-BlgbNsLm.css",
+    "src": "_TestPanel-BlgbNsLm.css"
+  },
+  "__decimalMult-DtTLfvIz.js": {
+    "file": "assets/_decimalMult-DtTLfvIz.js",
+    "name": "_decimalMult",
+    "imports": [
+      "_buildTransducerSim-DpfeOYQM.js"
+    ]
+  },
+  "_afd-C-fgwiUC.js": {
+    "file": "assets/afd-C-fgwiUC.js",
+    "name": "afd"
+  },
+  "_ap-SmmCxN6X.js": {
+    "file": "assets/ap-SmmCxN6X.js",
+    "name": "ap",
+    "imports": [
+      "_useCanvasState-Dy2rd3lO.js"
+    ]
+  },
+  "_buildTransducerSim-DpfeOYQM.js": {
+    "file": "assets/buildTransducerSim-DpfeOYQM.js",
+    "name": "buildTransducerSim"
+  },
+  "_expandGuidedSteps-CaE7BXKS.js": {
+    "file": "assets/expandGuidedSteps-CaE7BXKS.js",
+    "name": "expandGuidedSteps"
+  },
+  "_exportImportFile-BQ-n55U3.css": {
+    "file": "assets/exportImportFile-BQ-n55U3.css",
+    "src": "_exportImportFile-BQ-n55U3.css"
+  },
+  "_exportImportFile-DDTxp6N1.js": {
+    "file": "assets/exportImportFile-DDTxp6N1.js",
+    "name": "exportImportFile",
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_afd-C-fgwiUC.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_navButtonStyles-Chg132sf.js"
+    ],
+    "css": [
+      "assets/exportImportFile-BQ-n55U3.css"
+    ]
+  },
+  "_findSecondShortestWord-CcK77Hu_.js": {
+    "file": "assets/findSecondShortestWord-CcK77Hu_.js",
+    "name": "findSecondShortestWord",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js",
+      "_useCanvasState-Dy2rd3lO.js"
+    ]
+  },
+  "_maurilio2_apontando_pro_lado-CMRijgPv.js": {
+    "file": "assets/maurilio2_apontando_pro_lado-CMRijgPv.js",
+    "name": "maurilio2_apontando_pro_lado",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ],
+    "assets": [
+      "assets/maurilio2_apontando_pro_lado-cma7otjb.webp"
+    ]
+  },
+  "_mt-recon-HfBWfh93.js": {
+    "file": "assets/mt-recon-HfBWfh93.js",
+    "name": "mt-recon",
+    "imports": [
+      "index.html",
+      "_expandGuidedSteps-CaE7BXKS.js",
+      "_tmAlgorithms-DKMAzPoo.js"
+    ],
+    "dynamicImports": [
+      "src/levels_data/mt-recon/L1.js",
+      "src/levels_data/mt-recon/L2.js",
+      "src/levels_data/mt-recon/L3.js",
+      "src/levels_data/mt-recon/L4.js",
+      "src/levels_data/mt-recon/L5.js",
+      "src/levels_data/mt-recon/L6.js",
+      "src/levels_data/mt-recon/L7.js",
+      "src/levels_data/mt-recon/L8.js",
+      "src/levels_data/mt-recon/L9.js",
+      "src/levels_data/mt-recon/L10.js",
+      "src/levels_data/mt-recon/L11.js",
+      "src/levels_data/mt-recon/L12.js",
+      "src/levels_data/mt-recon/L13.js",
+      "src/levels_data/mt-recon/L14.js",
+      "src/levels_data/mt-recon/L15.js",
+      "src/levels_data/mt-recon/L16.js",
+      "src/levels_data/mt-recon/L17.js",
+      "src/levels_data/mt-recon/L18.js"
+    ]
+  },
+  "_mtFormalValidation-7gB185z2.js": {
+    "file": "assets/mtFormalValidation-7gB185z2.js",
+    "name": "mtFormalValidation",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_maurilio2_apontando_pro_lado-CMRijgPv.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_APFooterDeck-D9ZqzvAi.js"
+    ],
+    "css": [
+      "assets/mtFormalValidation-D2QRQB3U.css"
+    ]
+  },
+  "_mtFormalValidation-D2QRQB3U.css": {
+    "file": "assets/mtFormalValidation-D2QRQB3U.css",
+    "src": "_mtFormalValidation-D2QRQB3U.css"
+  },
+  "_navButtonStyles-Chg132sf.js": {
+    "file": "assets/navButtonStyles-Chg132sf.js",
+    "name": "navButtonStyles"
+  },
+  "_react-vendor-DTQg3ZoS.js": {
+    "file": "assets/react-vendor-DTQg3ZoS.js",
+    "name": "react-vendor",
+    "imports": [
+      "_rolldown-runtime-D9-fqq9M.js"
+    ]
+  },
+  "_rolldown-runtime-D9-fqq9M.js": {
+    "file": "assets/rolldown-runtime-D9-fqq9M.js",
+    "name": "rolldown-runtime"
+  },
+  "_sizeHint-BLIOKB1Z.js": {
+    "file": "assets/sizeHint-BLIOKB1Z.js",
+    "name": "sizeHint"
+  },
+  "_tmAlgorithms-DKMAzPoo.js": {
+    "file": "assets/tmAlgorithms-DKMAzPoo.js",
+    "name": "tmAlgorithms"
+  },
+  "_useAFDGraph-D5zlCNBN.js": {
+    "file": "assets/useAFDGraph-D5zlCNBN.js",
+    "name": "useAFDGraph",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ]
+  },
+  "_useCanvasState-Dy2rd3lO.js": {
+    "file": "assets/useCanvasState-Dy2rd3lO.js",
+    "name": "useCanvasState",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ]
+  },
+  "_useDrawing-CHz7lgnp.js": {
+    "file": "assets/useDrawing-CHz7lgnp.js",
+    "name": "useDrawing",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ],
+    "css": [
+      "assets/useDrawing-DUTPVNRe.css"
+    ],
+    "assets": [
+      "assets/maurilio1_serio-Ck23QF1K.webp"
+    ]
+  },
+  "_useDrawing-DUTPVNRe.css": {
+    "file": "assets/useDrawing-DUTPVNRe.css",
+    "src": "_useDrawing-DUTPVNRe.css"
+  },
+  "_useHistory-C9jEIsH4.js": {
+    "file": "assets/useHistory-C9jEIsH4.js",
+    "name": "useHistory",
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_maurilio2_apontando_pro_lado-CMRijgPv.js",
+      "_useCanvasState-Dy2rd3lO.js"
+    ]
+  },
+  "index.html": {
+    "file": "assets/index-rUCpQ_j9.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "imports": [
+      "_react-vendor-DTQg3ZoS.js"
+    ],
+    "dynamicImports": [
+      "src/modules/afd/AFDPart1.jsx",
+      "src/modules/afd/AFDPart2.jsx",
+      "src/modules/afd/AFDMinimizer.jsx",
+      "src/modules/ap/APPart1.jsx",
+      "src/modules/mt/MTPart1.jsx",
+      "src/modules/mt-recon/MTReconPart1.jsx",
+      "src/modules/boss/BossTrabalho.jsx",
+      "src/modules/boss/BossProva.jsx",
+      "src/modules/word-guess/WordGuess.jsx"
+    ],
+    "css": [
+      "assets/index-Dw0DDl6C.css"
+    ],
+    "assets": [
+      "assets/maurilio3_explicando-Wiw77hrB.webp"
+    ]
+  },
+  "src/assets/maurilio1_serio.webp": {
+    "file": "assets/maurilio1_serio-Ck23QF1K.webp",
+    "src": "src/assets/maurilio1_serio.webp"
+  },
+  "src/assets/maurilio2_apontando_pro_lado.webp": {
+    "file": "assets/maurilio2_apontando_pro_lado-cma7otjb.webp",
+    "src": "src/assets/maurilio2_apontando_pro_lado.webp"
+  },
+  "src/assets/maurilio3_explicando.webp": {
+    "file": "assets/maurilio3_explicando-Wiw77hrB.webp",
+    "src": "src/assets/maurilio3_explicando.webp"
+  },
+  "src/levels_data/mt-recon/L1.js": {
+    "file": "assets/L1-uVC-CE2X.js",
+    "name": "L1",
+    "src": "src/levels_data/mt-recon/L1.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L10.js": {
+    "file": "assets/L10-BaNBxiN_.js",
+    "name": "L10",
+    "src": "src/levels_data/mt-recon/L10.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L11.js": {
+    "file": "assets/L11-CISylgLE.js",
+    "name": "L11",
+    "src": "src/levels_data/mt-recon/L11.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L12.js": {
+    "file": "assets/L12-DaMALBoi.js",
+    "name": "L12",
+    "src": "src/levels_data/mt-recon/L12.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L13.js": {
+    "file": "assets/L13-DN7o1uyf.js",
+    "name": "L13",
+    "src": "src/levels_data/mt-recon/L13.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L14.js": {
+    "file": "assets/L14-a2jmgndY.js",
+    "name": "L14",
+    "src": "src/levels_data/mt-recon/L14.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L15.js": {
+    "file": "assets/L15-D6EBRJ1E.js",
+    "name": "L15",
+    "src": "src/levels_data/mt-recon/L15.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L16.js": {
+    "file": "assets/L16-CFQTJnS3.js",
+    "name": "L16",
+    "src": "src/levels_data/mt-recon/L16.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L17.js": {
+    "file": "assets/L17-0GyAqxIc.js",
+    "name": "L17",
+    "src": "src/levels_data/mt-recon/L17.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L18.js": {
+    "file": "assets/L18-C-_ZjAqs.js",
+    "name": "L18",
+    "src": "src/levels_data/mt-recon/L18.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L2.js": {
+    "file": "assets/L2-VTfasMYw.js",
+    "name": "L2",
+    "src": "src/levels_data/mt-recon/L2.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L3.js": {
+    "file": "assets/L3-B10lIT60.js",
+    "name": "L3",
+    "src": "src/levels_data/mt-recon/L3.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L4.js": {
+    "file": "assets/L4-BPBy0L_b.js",
+    "name": "L4",
+    "src": "src/levels_data/mt-recon/L4.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L5.js": {
+    "file": "assets/L5-D3OkkwWp.js",
+    "name": "L5",
+    "src": "src/levels_data/mt-recon/L5.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L6.js": {
+    "file": "assets/L6-ClPCRudP.js",
+    "name": "L6",
+    "src": "src/levels_data/mt-recon/L6.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L7.js": {
+    "file": "assets/L7-D7qeX3Yi.js",
+    "name": "L7",
+    "src": "src/levels_data/mt-recon/L7.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L8.js": {
+    "file": "assets/L8-BwHK1hCY.js",
+    "name": "L8",
+    "src": "src/levels_data/mt-recon/L8.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt-recon/L9.js": {
+    "file": "assets/L9-CqhvTedc.js",
+    "name": "L9",
+    "src": "src/levels_data/mt-recon/L9.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L1.js": {
+    "file": "assets/L1-BtdQZ3x_.js",
+    "name": "L1",
+    "src": "src/levels_data/mt/L1.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L10.js": {
+    "file": "assets/L10-B_T6qg94.js",
+    "name": "L10",
+    "src": "src/levels_data/mt/L10.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_buildTransducerSim-DpfeOYQM.js"
+    ]
+  },
+  "src/levels_data/mt/L11.js": {
+    "file": "assets/L11-CpH4pJS5.js",
+    "name": "L11",
+    "src": "src/levels_data/mt/L11.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L12.js": {
+    "file": "assets/L12-CvwDfpzt.js",
+    "name": "L12",
+    "src": "src/levels_data/mt/L12.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L14.js": {
+    "file": "assets/L14-DhFM3yqG.js",
+    "name": "L14",
+    "src": "src/levels_data/mt/L14.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L16.js": {
+    "file": "assets/L16-CkRUQeh6.js",
+    "name": "L16",
+    "src": "src/levels_data/mt/L16.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L17.js": {
+    "file": "assets/L17-Bhftjmd4.js",
+    "name": "L17",
+    "src": "src/levels_data/mt/L17.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L18.js": {
+    "file": "assets/L18-DVzjY6Vv.js",
+    "name": "L18",
+    "src": "src/levels_data/mt/L18.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L19.js": {
+    "file": "assets/L19-B2crTNqC.js",
+    "name": "L19",
+    "src": "src/levels_data/mt/L19.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L2.js": {
+    "file": "assets/L2-DmoKUbMA.js",
+    "name": "L2",
+    "src": "src/levels_data/mt/L2.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_buildTransducerSim-DpfeOYQM.js"
+    ]
+  },
+  "src/levels_data/mt/L20.js": {
+    "file": "assets/L20-DqUj1mgv.js",
+    "name": "L20",
+    "src": "src/levels_data/mt/L20.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L21.js": {
+    "file": "assets/L21-DndSM6ii.js",
+    "name": "L21",
+    "src": "src/levels_data/mt/L21.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L22.js": {
+    "file": "assets/L22-CkuvVpHk.js",
+    "name": "L22",
+    "src": "src/levels_data/mt/L22.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L23.js": {
+    "file": "assets/L23-BKalXVQ9.js",
+    "name": "L23",
+    "src": "src/levels_data/mt/L23.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "__decimalMult-DtTLfvIz.js"
+    ]
+  },
+  "src/levels_data/mt/L24.js": {
+    "file": "assets/L24-C0iQlp5i.js",
+    "name": "L24",
+    "src": "src/levels_data/mt/L24.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L25.js": {
+    "file": "assets/L25-DOZL-v3e.js",
+    "name": "L25",
+    "src": "src/levels_data/mt/L25.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L3.js": {
+    "file": "assets/L3-CGZ2KKGB.js",
+    "name": "L3",
+    "src": "src/levels_data/mt/L3.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L4.js": {
+    "file": "assets/L4-CVD5iESx.js",
+    "name": "L4",
+    "src": "src/levels_data/mt/L4.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L6.js": {
+    "file": "assets/L6-m3WO0dDH.js",
+    "name": "L6",
+    "src": "src/levels_data/mt/L6.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L7.js": {
+    "file": "assets/L7-B9b-CRB3.js",
+    "name": "L7",
+    "src": "src/levels_data/mt/L7.js",
+    "isDynamicEntry": true
+  },
+  "src/levels_data/mt/L9.js": {
+    "file": "assets/L9-Btga4kyd.js",
+    "name": "L9",
+    "src": "src/levels_data/mt/L9.js",
+    "isDynamicEntry": true
+  },
+  "src/modules/afd/AFDMinimizer.jsx": {
+    "file": "assets/AFDMinimizer-Do6IqvF8.js",
+    "name": "AFDMinimizer",
+    "src": "src/modules/afd/AFDMinimizer.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_useHistory-C9jEIsH4.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_GraphView-CS3srcoY.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_navButtonStyles-Chg132sf.js",
+      "_useAFDGraph-D5zlCNBN.js"
+    ],
+    "css": [
+      "assets/AFDMinimizer-CXxJkf6o.css"
+    ],
+    "assets": [
+      "assets/maurilio1_serio-Ck23QF1K.webp"
+    ]
+  },
+  "src/modules/afd/AFDPart1.jsx": {
+    "file": "assets/AFDPart1-D3CkSAY2.js",
+    "name": "AFDPart1",
+    "src": "src/modules/afd/AFDPart1.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_afd-C-fgwiUC.js",
+      "_exportImportFile-DDTxp6N1.js",
+      "_useHistory-C9jEIsH4.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_BlackboardPanel-BIGXFr-x.js",
+      "_SimPanel-D8VeaPRc.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_useAFDGraph-D5zlCNBN.js",
+      "_sizeHint-BLIOKB1Z.js",
+      "_findSecondShortestWord-CcK77Hu_.js"
+    ],
+    "css": [
+      "assets/TestPanel-BlgbNsLm.css"
+    ],
+    "assets": [
+      "assets/maurilio3_explicando-Wiw77hrB.webp",
+      "assets/maurilio1_serio-Ck23QF1K.webp"
+    ]
+  },
+  "src/modules/afd/AFDPart2.jsx": {
+    "file": "assets/AFDPart2-YvGjt1Xn.js",
+    "name": "AFDPart2",
+    "src": "src/modules/afd/AFDPart2.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_afd-C-fgwiUC.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_GraphView-CS3srcoY.js",
+      "_SimPanel-D8VeaPRc.js",
+      "_navButtonStyles-Chg132sf.js"
+    ],
+    "css": [
+      "assets/AFDPart2-BdqcTbn3.css",
+      "assets/TestPanel-BlgbNsLm.css"
+    ],
+    "assets": [
+      "assets/maurilio3_explicando-Wiw77hrB.webp"
+    ]
+  },
+  "src/modules/ap/APPart1.jsx": {
+    "file": "assets/APPart1-CO8J_kCW.js",
+    "name": "APPart1",
+    "src": "src/modules/ap/APPart1.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_ap-SmmCxN6X.js",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_maurilio2_apontando_pro_lado-CMRijgPv.js",
+      "_exportImportFile-DDTxp6N1.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_BlackboardPanel-BIGXFr-x.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_sizeHint-BLIOKB1Z.js",
+      "_APFooterDeck-D9ZqzvAi.js",
+      "_findSecondShortestWord-CcK77Hu_.js"
+    ],
+    "css": [
+      "assets/TestPanel-BlgbNsLm.css"
+    ]
+  },
+  "src/modules/boss/BossProva.jsx": {
+    "file": "assets/BossProva-DKYqu27Z.js",
+    "name": "BossProva",
+    "src": "src/modules/boss/BossProva.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_BossMode-BLYwDqME.js"
+    ]
+  },
+  "src/modules/boss/BossTrabalho.jsx": {
+    "file": "assets/BossTrabalho-cnkzy5QC.js",
+    "name": "BossTrabalho",
+    "src": "src/modules/boss/BossTrabalho.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_BossMode-BLYwDqME.js"
+    ]
+  },
+  "src/modules/mt-recon/MTReconPart1.jsx": {
+    "file": "assets/MTReconPart1-DRF5VdcL.js",
+    "name": "MTReconPart1",
+    "src": "src/modules/mt-recon/MTReconPart1.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_mt-recon-HfBWfh93.js",
+      "_exportImportFile-DDTxp6N1.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_sizeHint-BLIOKB1Z.js",
+      "_APFooterDeck-D9ZqzvAi.js",
+      "_mtFormalValidation-7gB185z2.js",
+      "_tmAlgorithms-DKMAzPoo.js",
+      "_findSecondShortestWord-CcK77Hu_.js"
+    ],
+    "css": [
+      "assets/MTReconPart1-LLaKlqCa.css",
+      "assets/TestPanel-BlgbNsLm.css"
+    ]
+  },
+  "src/modules/mt/MTPart1.jsx": {
+    "file": "assets/MTPart1-CUM__2wc.js",
+    "name": "MTPart1",
+    "src": "src/modules/mt/MTPart1.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_react-vendor-DTQg3ZoS.js",
+      "_useDrawing-CHz7lgnp.js",
+      "_exportImportFile-DDTxp6N1.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_APFooterDeck-D9ZqzvAi.js",
+      "_mtFormalValidation-7gB185z2.js",
+      "_expandGuidedSteps-CaE7BXKS.js",
+      "_tmAlgorithms-DKMAzPoo.js"
+    ],
+    "dynamicImports": [
+      "src/levels_data/mt/L1.js",
+      "src/levels_data/mt/L2.js",
+      "src/levels_data/mt/L3.js",
+      "src/levels_data/mt/L4.js",
+      "src/levels_data/mt/L6.js",
+      "src/levels_data/mt/L7.js",
+      "src/levels_data/mt/L9.js",
+      "src/levels_data/mt/L10.js",
+      "src/levels_data/mt/L11.js",
+      "src/levels_data/mt/L12.js",
+      "src/levels_data/mt/L14.js",
+      "src/levels_data/mt/L16.js",
+      "src/levels_data/mt/L17.js",
+      "src/levels_data/mt/L18.js",
+      "src/levels_data/mt/L19.js",
+      "src/levels_data/mt/L20.js",
+      "src/levels_data/mt/L21.js",
+      "src/levels_data/mt/L22.js",
+      "src/levels_data/mt/L23.js",
+      "src/levels_data/mt/L24.js",
+      "src/levels_data/mt/L25.js"
+    ],
+    "css": [
+      "assets/TestPanel-BlgbNsLm.css"
+    ]
+  },
+  "src/modules/word-guess/WordGuess.jsx": {
+    "file": "assets/WordGuess-Bp3oNMSN.js",
+    "name": "WordGuess",
+    "src": "src/modules/word-guess/WordGuess.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_ap-SmmCxN6X.js",
+      "_react-vendor-DTQg3ZoS.js",
+      "_afd-C-fgwiUC.js",
+      "_mt-recon-HfBWfh93.js",
+      "_LevelGridScreen-CetBCvGD.js",
+      "_useCanvasState-Dy2rd3lO.js",
+      "_navButtonStyles-Chg132sf.js",
+      "_useAFDGraph-D5zlCNBN.js",
+      "_tmAlgorithms-DKMAzPoo.js",
+      "_findSecondShortestWord-CcK77Hu_.js"
+    ]
+  }
+}
