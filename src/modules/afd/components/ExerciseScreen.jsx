@@ -92,6 +92,15 @@ export default function ExerciseScreen({ level, progress, updateProgress, showTo
   const [simWord,      setSimWord]      = useState('');
   const [showSimPanel, setShowSimPanel] = useState(false);
   const [simHighlight, setSimHighlight] = useState({ nodeId: null, type: null });
+  // O simulador observa estes callbacks em efeitos; identidades estáveis evitam
+  // que o destaque provoque uma nova atualização a cada renderização do pai.
+  const closeSimPanel = useCallback(() => {
+    setShowSimPanel(false);
+    setSimHighlight({ nodeId: null, type: null });
+  }, []);
+  const highlightSimNode = useCallback((nodeId, type) => {
+    setSimHighlight({ nodeId, type });
+  }, []);
 
   useEffect(() => {
     if (!isDrawMode) return;
@@ -489,8 +498,8 @@ export default function ExerciseScreen({ level, progress, updateProgress, showTo
             word={simWord}
             nodes={graph.nodes}
             transitions={graph.transitions}
-            onClose={() => { setShowSimPanel(false); setSimHighlight({ nodeId: null, type: null }); }}
-            onHighlightNode={(nid, type) => setSimHighlight({ nodeId: nid, type })}
+            onClose={closeSimPanel}
+            onHighlightNode={highlightSimNode}
           />
         </footer>
       )}

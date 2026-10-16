@@ -105,6 +105,9 @@
   flex-direction: column;
   overflow-y: auto;
   background: var(--bg-dark, #fff9c4);
+  /* O professor fica fixo no canto inferior direito. Reserva sua altura para
+     que os controles do painel não fiquem atrás da imagem clicável. */
+  padding-bottom: 180px;
 }
 
 /* ── Panel (right side content) ── */
