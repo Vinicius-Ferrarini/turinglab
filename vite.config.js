@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   build: {
+    // Inventário dos arquivos e imports, conferido antes de publicar.
+    manifest: true,
     rollupOptions: {
       output: {
         // React em chunk próprio — não muda entre deploys, navegador pode cachear por meses.

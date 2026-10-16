@@ -36,7 +36,7 @@ A suíte completa continua disponível com `npm run test:e2e`. A configuração 
 
 ```sh
 npm run build
-npx playwright test --config playwright.production.config.js
+npm run test:e2e:production
 ```
 
 A configuração de produção executa os mesmos 30 casos contra `dist`, servido na porta 4173 pelo preview do Vite. O servidor é iniciado pelo Playwright; uma porta já ocupada faz a execução falhar para evitar testar outra versão por engano. A build deve ser feita antes para não testar arquivos antigos.
@@ -53,4 +53,30 @@ Na Minimização, a imagem fixa do professor interceptava o clique em um botão 
 
 ## Deploy
 
-Nenhum teste foi conectado ao `predeploy` ou ao comando `deploy` nesta mudança. A integração será feita separadamente.
+`npm run deploy` executa automaticamente `predeploy`, que chama `npm run check:deploy` nesta ordem:
+
+1. Todos os testes unitários (`npm run test`).
+2. Build de produção (`npm run build`).
+3. Verificação do pacote de publicação (`npm run validate:deploy`).
+4. Os 30 E2E de navegação e atividades contra a build (`npm run test:e2e:production`, Chromium, dois workers).
+
+Qualquer etapa que terminar com erro interrompe a sequência antes da publicação. O upload continua usando `gh-pages`, com `--nojekyll --dotfiles`: a primeira opção desativa o Jekyll, que pode excluir arquivos iniciados por `_`; a segunda preserva os arquivos ocultos. O marcador `public/.nojekyll` também é copiado pelo Vite para a raiz de `dist`.
+
+A verificação de publicação lê o manifesto gerado pelo Vite (`dist/.vite/manifest.json`), confere a existência dos arquivos listados, incluindo chunks compartilhados e imports dinâmicos, e verifica `index.html`, `.nojekyll`, CNAME e as duas opções do comando de publicação. Testes de regressão removem um chunk `_decimalMult` e o marcador para demonstrar o bloqueio.
+
+Para executar exatamente a preparação do deploy **sem publicar**:
+
+```sh
+npm run check:deploy
+```
+
+Em uma máquina nova, instale as dependências e o navegador de testes antes da primeira execução. A falta do navegador bloqueia a publicação, em vez de pular os testes:
+
+```sh
+npm ci
+npx playwright install chromium --only-shell
+```
+
+A suíte E2E completa de desenvolvimento permanece disponível separadamente em `npm run test:e2e`; o bloqueio de publicação usa a seleção de 30 casos sobre produção, além de todos os testes unitários. A configuração de produção continua exigindo a porta 4173 livre. Não execute `gh-pages` diretamente para publicar, pois isso contorna o `predeploy` do npm.
+
+Essas verificações protegem o pacote local e sua configuração de envio. Não garantem disponibilidade do provedor nem reproduzem cache/CDN; verificação do site após a publicação continua sendo uma camada adicional.

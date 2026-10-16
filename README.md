@@ -241,7 +241,11 @@ npm run build     # build de produção (dist/)
 npm run test      # suíte de testes (Vitest)
 npm run lint      # ESLint
 npm run test:e2e  # testes end-to-end (Playwright)
+npm run check:deploy  # testes unitários + build + verificação dos arquivos + E2E de produção, sem publicar
+npm run deploy   # executa check:deploy e só publica se todas as etapas passarem
 ```
+
+O deploy usa `--nojekyll --dotfiles` e inclui `public/.nojekyll` para que o GitHub Pages sirva também arquivos iniciados por `_`. Na primeira execução dos testes em uma máquina nova, instale o navegador com `npx playwright install chromium --only-shell`. Detalhes da cobertura e das verificações: [docs/E2E_COVERAGE.md](docs/E2E_COVERAGE.md).
 
 ---
 
