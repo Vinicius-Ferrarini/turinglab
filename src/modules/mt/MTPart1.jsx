@@ -53,10 +53,13 @@ export default function MTPart1({ onBack, progress, updateProgress,
   // aparência de "site quebrado" (reportado pelo usuário). Preferível esperar
   // ~meio segundo com um placeholder único a ter a grade "piscando" botões.
   const [mtLevels, setMtLevels] = useState([]);
+  const [loadError, setLoadError] = useState(false);
   useEffect(() => {
     let cancelled = false;
     Promise.all(MT_LEVEL_ORDER.map(loadMTLevel)).then(levels => {
       if (!cancelled) setMtLevels(levels);
+    }).catch(() => {
+      if (!cancelled) setLoadError(true);
     });
     return () => { cancelled = true; };
   }, []);
@@ -357,7 +360,13 @@ export default function MTPart1({ onBack, progress, updateProgress,
   // loadMTLevel (cache-hit instantâneo se o prefetch já rodou; import() real
   // só no caso raro de clique antes do prefetch terminar).
   const loadLevel = useCallback(async (lvOrId) => {
-    const lv = typeof lvOrId === 'string' ? await loadMTLevel(lvOrId) : lvOrId;
+    let lv;
+    try {
+      lv = typeof lvOrId === 'string' ? await loadMTLevel(lvOrId) : lvOrId;
+    } catch {
+      setLoadError(true);
+      return;
+    }
     // Hidratação SÓ depois do await acima resolver (id cru vindo do Boss) —
     // ver ADR 0011/§4 do prompt original.
     const restored = readLevelSession('mt-trans', lv.id);
@@ -617,6 +626,21 @@ export default function MTPart1({ onBack, progress, updateProgress,
   const stars = level ? (progress?.[`mt-trans-${level.id}`]?.stars || 0) : 0;
 
   // ── Menu ─────────────────────────────────────────────────────────────────────
+  if (loadError) {
+    return (
+      <div className="menu-screen menu-screen-fases min-screen" style={{ justifyContent: 'center' }}>
+        <div role="alert" style={{ textAlign: 'center', padding: 24 }}>
+          <h2>Não foi possível carregar os níveis.</h2>
+          <p>Verifique sua conexão e recarregue a página. O jogo pode ter recebido uma atualização.</p>
+          <button className="menu-btn primary" onClick={() => window.location.reload()}>
+            Recarregar página
+          </button>
+          <button className="back-btn" onClick={onBack}>⬅ Voltar</button>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === 'MENU') {
     // No Boss (forçado), o nível carrega async: mostra um placeholder em vez de
     // piscar a grade do menu antes de entrar no exercício.
